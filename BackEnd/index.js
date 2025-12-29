@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const config = require("./config.json");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const session = require("express-session");
@@ -24,7 +23,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 
+    maxAge: 1000 * 60 * 60
   }
 }))
 
@@ -43,7 +42,7 @@ const PORT = process.env.PORT || 8000;
 console.log("Attempting to connect to the database...");
 
 mongoose
-  .connect(config.connectionString)
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("Connected to database!");
     app.listen(PORT, () => {
