@@ -33,7 +33,8 @@ npm install
 
 ```
 MONGODB_URI=<your_mongodb_uri>
-JWT_SECRET=<your_jwt_secret>
+ACCESS_TOKEN_SECRET=<your_access_token_secret>
+SESSION_SECRET=<your_session_secret>
 ```
 
 5. Start the server
