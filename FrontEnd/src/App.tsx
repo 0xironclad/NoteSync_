@@ -5,6 +5,7 @@ import DashboardContainer from "./components/DashboardContainer"
 import PrivateRoute from "./components/PrivateRoute"
 import Profile from "./components/Profile/Profile"
 import Landing from "./Pages/Landing/Landing"
+import { Toaster } from "./components/ui/sonner"
 
 const routes = (
   <Routes>
@@ -26,6 +27,7 @@ function App() {
       <div className="w-screen min-h-screen">
         {routes}
       </div>
+      <Toaster position="bottom-right" richColors />
     </Router>
   )
 }

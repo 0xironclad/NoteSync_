@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import AxiosInstance from "../utils/AxiosInstance";
 import Dashboard from "./Dashboard";
 import { Note, NoteColor, NotePriority, ChecklistItem } from "@/types/note";
+import { toast } from "sonner";
 
 interface NoteFormData {
   title: string;
@@ -97,8 +98,10 @@ function DashboardContainer() {
         const response = await AxiosInstance.post("/add-note", data);
         if (!response.data.error) {
             fetchData();
-            fetchTags(); // Refresh tags after creating note
+            fetchTags();
+            toast.success("Note created successfully");
         } else {
+            toast.error(response.data.message || "Failed to create note");
             throw new Error(response.data.message);
         }
     };
@@ -107,8 +110,10 @@ function DashboardContainer() {
         const response = await AxiosInstance.put(`/edit-note/${noteId}`, data);
         if (!response.data.error) {
             fetchData();
-            fetchTags(); // Refresh tags after editing note
+            fetchTags();
+            toast.success("Note updated successfully");
         } else {
+            toast.error(response.data.message || "Failed to update note");
             throw new Error(response.data.message);
         }
     };
@@ -117,7 +122,10 @@ function DashboardContainer() {
         const response = await AxiosInstance.delete(`/delete-note/${noteId}`);
         if (!response.data.error) {
             fetchData();
-            fetchTags(); // Refresh tags after deleting note
+            fetchTags();
+            toast.success("Note deleted successfully");
+        } else {
+            toast.error(response.data.message || "Failed to delete note");
         }
     };
 
@@ -125,6 +133,9 @@ function DashboardContainer() {
         const response = await AxiosInstance.put(`/update-pin/${noteId}`, { isPinned: !isPinned });
         if (!response.data.error) {
             fetchData();
+            toast.success(isPinned ? "Note unpinned" : "Note pinned");
+        } else {
+            toast.error(response.data.message || "Failed to update pin status");
         }
     };
 
@@ -132,6 +143,9 @@ function DashboardContainer() {
         const response = await AxiosInstance.put(`/edit-note/${noteId}`, { isArchived: !isArchived });
         if (!response.data.error) {
             fetchData();
+            toast.success(isArchived ? "Note restored" : "Note archived");
+        } else {
+            toast.error(response.data.message || "Failed to update archive status");
         }
     };
 
@@ -139,6 +153,8 @@ function DashboardContainer() {
         const response = await AxiosInstance.put(`/toggle-checklist/${noteId}/${itemId}`);
         if (!response.data.error) {
             fetchData();
+        } else {
+            toast.error(response.data.message || "Failed to update checklist item");
         }
     };
 

@@ -7,7 +7,10 @@ const {
   getAllNotes,
   deleteNote,
   updatePin,
-  searchNote
+  searchNote,
+  toggleChecklistItem,
+  getAllTags,
+  getNotesByTag
 } = require("../controllers/note.controller");
 
 router.post("/add-note", authenticateToken, addNote);
@@ -16,5 +19,8 @@ router.get("/all-notes", authenticateToken, getAllNotes);
 router.delete("/delete-note/:noteId", authenticateToken, deleteNote);
 router.put("/update-pin/:noteId", authenticateToken, updatePin);
 router.get("/search-note", authenticateToken, searchNote);
+router.put("/toggle-checklist/:noteId/:itemId", authenticateToken, toggleChecklistItem);
+router.get("/tags", authenticateToken, getAllTags);
+router.get("/notes-by-tag/:tag", authenticateToken, getNotesByTag);
 
 module.exports = router;

@@ -22,7 +22,7 @@ function MarkdownRenderer({ content, className = "", compact = false }: Markdown
       .replace(/>/g, "&gt;")
 
     // Code blocks (```code```) - must be before inline code
-    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
       return `<pre class="bg-black/10 dark:bg-white/10 rounded-md p-2 my-2 overflow-x-auto text-xs font-mono"><code>${code.trim()}</code></pre>`
     })
 

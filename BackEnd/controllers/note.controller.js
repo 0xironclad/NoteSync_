@@ -2,26 +2,40 @@ const Note = require("../models/note.model");
 
 // !ADD NOTE
 const addNote = async (req, res) => {
-  const { title, content, tags } = req.body;
+  const {
+    title,
+    content,
+    tags,
+    color,
+    priority,
+    dueDate,
+    reminder,
+    checklist
+  } = req.body;
   const { user } = req.user;
 
   try {
-    if (!title || !content) {
+    if (!title) {
       return res.status(400).json({
         error: true,
-        message: "Title and content are required!",
+        message: "Title is required!",
       });
     }
     const note = new Note({
       title,
-      content,
+      content: content || "",
       tags: tags || [],
+      color: color || "default",
+      priority: priority || "none",
+      dueDate: dueDate || null,
+      reminder: reminder || null,
+      checklist: checklist || [],
       userId: user._id,
     });
     await note.save();
     res.status(201).json({
       error: false,
-      message: "Note added succesfully!",
+      message: "Note added successfully!",
       note,
     });
   } catch (err) {
@@ -35,14 +49,19 @@ const addNote = async (req, res) => {
 // !EDIT NOTE
 const editNote = async (req, res) => {
   const { noteId } = req.params;
-  const { title, content, tags, isPinned } = req.body;
+  const {
+    title,
+    content,
+    tags,
+    color,
+    isPinned,
+    priority,
+    isArchived,
+    dueDate,
+    reminder,
+    checklist
+  } = req.body;
   const { user } = req.user;
-  if (!title && !content && !tags) {
-    return res.status(400).json({
-      error: true,
-      message: "No changes made!",
-    });
-  }
 
   try {
     const note = await Note.findOne({ _id: noteId, userId: user._id });
@@ -53,15 +72,22 @@ const editNote = async (req, res) => {
       });
     }
 
-    if (title) note.title = title;
-    if (content) note.content = content;
-    if (tags) note.tags = tags;
-    if (isPinned) note.isPinned = isPinned;
+    // Update fields if provided (allowing empty strings and false values)
+    if (title !== undefined) note.title = title;
+    if (content !== undefined) note.content = content;
+    if (tags !== undefined) note.tags = tags;
+    if (color !== undefined) note.color = color;
+    if (isPinned !== undefined) note.isPinned = isPinned;
+    if (priority !== undefined) note.priority = priority;
+    if (isArchived !== undefined) note.isArchived = isArchived;
+    if (dueDate !== undefined) note.dueDate = dueDate;
+    if (reminder !== undefined) note.reminder = reminder;
+    if (checklist !== undefined) note.checklist = checklist;
 
     await note.save();
     return res.status(200).json({
       error: false,
-      message: "Note edited succesfully!",
+      message: "Note edited successfully!",
       note,
     });
   } catch (err) {
@@ -75,9 +101,16 @@ const editNote = async (req, res) => {
 // !GET ALL THE NOTES
 const getAllNotes = async (req, res) => {
   const { user } = req.user;
-  // console.log(user);
+  const { archived } = req.query;
+
   try {
-    const notes = await Note.find({ userId: user._id }).sort({ isPinned: -1 });
+    // Filter by archived status (default: show non-archived)
+    const isArchived = archived === 'true';
+    const notes = await Note.find({
+      userId: user._id,
+      isArchived: isArchived
+    }).sort({ isPinned: -1, updatedAt: -1 });
+
     return res.status(200).json({
       error: false,
       notes,
@@ -151,26 +184,32 @@ const updatePin = async (req, res) => {
   }
 };
 
-//
+// !SEARCH NOTES
 const searchNote = async (req, res) => {
   const { user } = req.user;
-  const { query } = req.query;
+  const { query, archived } = req.query;
+
   if (!query) {
     return res.status(400).json({
       error: true,
       message: "Query is required!",
     });
   }
+
   try {
+    const isArchived = archived === 'true';
     const notes = await Note.find({
       userId: user._id,
+      isArchived: isArchived,
       $or: [
         { title: { $regex: new RegExp(query, "i") } },
         { content: { $regex: new RegExp(query, "i") } },
         { tags: { $regex: new RegExp(query, "i") } },
+        { "checklist.text": { $regex: new RegExp(query, "i") } },
       ],
-    });
-    if(notes.length === 0){
+    }).sort({ isPinned: -1, updatedAt: -1 });
+
+    if (notes.length === 0) {
       return res.status(404).json({
         error: true,
         message: "No notes found!",
@@ -189,6 +228,107 @@ const searchNote = async (req, res) => {
   }
 };
 
+// !TOGGLE CHECKLIST ITEM
+const toggleChecklistItem = async (req, res) => {
+  const { noteId, itemId } = req.params;
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({
+        error: true,
+        message: "Note not found!",
+      });
+    }
+
+    const item = note.checklist.find(item => item.id === itemId);
+    if (!item) {
+      return res.status(404).json({
+        error: true,
+        message: "Checklist item not found!",
+      });
+    }
+
+    item.isCompleted = !item.isCompleted;
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: "Checklist item toggled successfully!",
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+// !GET ALL TAGS (for suggestions)
+const getAllTags = async (req, res) => {
+  const { user } = req.user;
+  const { query } = req.query;
+
+  try {
+    // Aggregate all unique tags from user's notes
+    const result = await Note.aggregate([
+      { $match: { userId: user._id } },
+      { $unwind: "$tags" },
+      { $group: { _id: "$tags", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 50 }
+    ]);
+
+    let tags = result.map(r => ({ name: r._id, count: r.count }));
+
+    // Filter by query if provided
+    if (query) {
+      const lowerQuery = query.toLowerCase();
+      tags = tags.filter(t => t.name.toLowerCase().includes(lowerQuery));
+    }
+
+    return res.status(200).json({
+      error: false,
+      tags,
+      message: "Tags retrieved successfully!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+// !GET NOTES BY TAG
+const getNotesByTag = async (req, res) => {
+  const { user } = req.user;
+  const { tag } = req.params;
+  const { archived } = req.query;
+
+  try {
+    const isArchived = archived === 'true';
+    const notes = await Note.find({
+      userId: user._id,
+      isArchived: isArchived,
+      tags: tag
+    }).sort({ isPinned: -1, updatedAt: -1 });
+
+    return res.status(200).json({
+      error: false,
+      notes,
+      message: `Notes with tag "${tag}" retrieved successfully!`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   addNote,
   editNote,
@@ -196,4 +336,7 @@ module.exports = {
   deleteNote,
   updatePin,
   searchNote,
+  toggleChecklistItem,
+  getAllTags,
+  getNotesByTag,
 };

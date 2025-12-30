@@ -24,7 +24,6 @@ function Calendar({ selected, onSelect, className, disabled }: CalendarProps) {
 
   const firstDayOfMonth = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const daysInPrevMonth = new Date(year, month, 0).getDate()
 
   const prevMonth = () => {
     setViewDate(new Date(year, month - 1, 1))
