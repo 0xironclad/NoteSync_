@@ -4,7 +4,7 @@ import Dashboard from "./Dashboard";
 
 function DashboardContainer() {
     const [notes, setNotes] = useState([]);
-    const [isSearchNote, setIsSearchNote] = useState(false);
+    const [, setIsSearchNote] = useState(false);
 
     const onSearchNote = async (searchText: string) => {
         // search param is used as the query parameter in the backend
@@ -31,6 +31,8 @@ function DashboardContainer() {
             console.log(error);
         }
     }
+    // Expose search function for future use
+    void onSearchNote;
     const fetchData = async () => {
         const token = localStorage.getItem("accessToken");
         // console.log(token);

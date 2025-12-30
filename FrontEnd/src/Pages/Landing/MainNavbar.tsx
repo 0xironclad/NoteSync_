@@ -1,29 +1,49 @@
-import NoteSyncLogo from "../../assets/NoteSyncLogo.png"
+import NoteSyncLogo from "@/assets/NoteSyncLogo.png"
 import { Link } from "react-router-dom"
-import "./Landing.css"
+import { Button } from "@/components/ui/button"
+
 function MainNavbar() {
-    return (
-        <nav className="navbar pt-4 pb-4">
-            <div className="container d-flex justify-content-between align-items-center">
-                <Link to="/">
-                    <img src={NoteSyncLogo} alt="Notesync Logo" className="logo" width={150} />
-                </Link>
-                <div className="pages d-flex gap-2">
-                    <Link to="/about" className="nav-link">About</Link>
-                    <Link to="/features" className="nav-link">Features</Link>
-                    <Link to="/contact" className="nav-link">Contact</Link>
-                </div>
-                <div className="auth d-flex gap-2">
-                    <button className="nav-link">
-                        <Link to="/login">Login</Link>
-                    </button>
-                    <button className="nav-link">
-                        <Link to="/register">Signup</Link>
-                    </button>
-                </div>
-            </div>
-        </nav>
-    )
+  return (
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          <Link to="/" className="flex items-center">
+            <img src={NoteSyncLogo} alt="NoteSync Logo" className="h-8 w-auto" />
+          </Link>
+
+          <div className="hidden md:flex items-center gap-6">
+            <Link
+              to="/about"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              About
+            </Link>
+            <Link
+              to="/features"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Features
+            </Link>
+            <Link
+              to="/contact"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Contact
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild>
+              <Link to="/login">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/register">Sign up</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
 }
 
 export default MainNavbar
