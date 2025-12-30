@@ -1,18 +1,14 @@
-import { Terminal } from "lucide-react"
+import { AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
-} from "../ui/alert"
 function TagAlert() {
     return (
-        <div className="tag-alert">
-            <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Heads up!</AlertTitle>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Tags Required</AlertTitle>
                 <AlertDescription>
-                    You can add components to your app using the cli.
+                    Please add at least one tag to your note.
                 </AlertDescription>
             </Alert>
         </div>
