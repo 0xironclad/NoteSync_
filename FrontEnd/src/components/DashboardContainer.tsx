@@ -14,19 +14,45 @@ interface NoteFormData {
   checklist: ChecklistItem[];
 }
 
+interface TagInfo {
+  name: string;
+  count: number;
+}
+
 function DashboardContainer() {
     const [notes, setNotes] = useState<Note[]>([]);
     const [showArchived, setShowArchived] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [allTags, setAllTags] = useState<TagInfo[]>([]);
+
+    const fetchTags = useCallback(async () => {
+        try {
+            const response = await AxiosInstance.get("/tags");
+            if (!response.data.error) {
+                setAllTags(response.data.tags);
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }, []);
 
     const fetchData = useCallback(async () => {
         const token = localStorage.getItem("accessToken");
         try {
-            const response = await AxiosInstance.get(`/all-notes?archived=${showArchived}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            let response;
+            if (selectedTag) {
+                // Fetch notes by tag
+                response = await AxiosInstance.get(
+                    `/notes-by-tag/${encodeURIComponent(selectedTag)}?archived=${showArchived}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+            } else {
+                // Fetch all notes
+                response = await AxiosInstance.get(`/all-notes?archived=${showArchived}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
             if (!response.data.error) {
                 setNotes(response.data.notes);
             } else {
@@ -35,10 +61,11 @@ function DashboardContainer() {
         } catch (error) {
             console.log(error);
         }
-    }, [showArchived]);
+    }, [showArchived, selectedTag]);
 
     const onSearchNote = async (searchText: string) => {
         setSearchQuery(searchText);
+        setSelectedTag(null); // Clear tag filter when searching
         const searchParam = searchText.trim();
         if (searchParam === "") {
             fetchData();
@@ -61,10 +88,16 @@ function DashboardContainer() {
         }
     };
 
+    const onSelectTag = (tag: string | null) => {
+        setSelectedTag(tag);
+        setSearchQuery(""); // Clear search when selecting tag
+    };
+
     const onCreateNote = async (data: NoteFormData) => {
         const response = await AxiosInstance.post("/add-note", data);
         if (!response.data.error) {
             fetchData();
+            fetchTags(); // Refresh tags after creating note
         } else {
             throw new Error(response.data.message);
         }
@@ -74,6 +107,7 @@ function DashboardContainer() {
         const response = await AxiosInstance.put(`/edit-note/${noteId}`, data);
         if (!response.data.error) {
             fetchData();
+            fetchTags(); // Refresh tags after editing note
         } else {
             throw new Error(response.data.message);
         }
@@ -83,6 +117,7 @@ function DashboardContainer() {
         const response = await AxiosInstance.delete(`/delete-note/${noteId}`);
         if (!response.data.error) {
             fetchData();
+            fetchTags(); // Refresh tags after deleting note
         }
     };
 
@@ -111,13 +146,20 @@ function DashboardContainer() {
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        fetchTags();
+    }, [fetchTags]);
+
     return (
         <Dashboard
             notes={notes}
             showArchived={showArchived}
             searchQuery={searchQuery}
+            selectedTag={selectedTag}
+            allTags={allTags}
             onToggleArchived={() => setShowArchived(!showArchived)}
             onSearch={onSearchNote}
+            onSelectTag={onSelectTag}
             onCreateNote={onCreateNote}
             onEditNote={onEditNote}
             onDeleteNote={onDeleteNote}

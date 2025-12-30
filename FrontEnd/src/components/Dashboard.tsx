@@ -3,8 +3,9 @@ import Navbar from "./Navbar"
 import NoteCard from "./NoteCard/NoteCard"
 import NoteEditor from "./NoteEditor/NoteEditor"
 import { Button } from "@/components/ui/button"
-import { Plus, Archive, Inbox, FileText } from "lucide-react"
+import { Plus, Archive, Inbox, FileText, Tag, X } from "lucide-react"
 import { Note, NoteColor, NotePriority, ChecklistItem } from "@/types/note"
+import { cn } from "@/lib/utils"
 
 interface NoteFormData {
   title: string
@@ -17,12 +18,20 @@ interface NoteFormData {
   checklist: ChecklistItem[]
 }
 
+interface TagInfo {
+  name: string
+  count: number
+}
+
 interface DashboardProps {
   notes: Note[]
   showArchived: boolean
   searchQuery: string
+  selectedTag: string | null
+  allTags: TagInfo[]
   onToggleArchived: () => void
   onSearch: (query: string) => void
+  onSelectTag: (tag: string | null) => void
   onCreateNote: (data: NoteFormData) => Promise<void>
   onEditNote: (noteId: string, data: NoteFormData) => Promise<void>
   onDeleteNote: (noteId: string) => Promise<void>
@@ -35,8 +44,11 @@ function Dashboard({
   notes,
   showArchived,
   searchQuery,
+  selectedTag,
+  allTags,
   onToggleArchived,
   onSearch,
+  onSelectTag,
   onCreateNote,
   onEditNote,
   onDeleteNote,
@@ -94,16 +106,32 @@ function Dashboard({
           <div className="flex items-center gap-3">
             {showArchived ? (
               <Archive className="h-6 w-6 text-muted-foreground" />
+            ) : selectedTag ? (
+              <Tag className="h-6 w-6 text-muted-foreground" />
             ) : (
               <Inbox className="h-6 w-6 text-muted-foreground" />
             )}
             <h1 className="text-2xl font-semibold">
-              {showArchived ? "Archived Notes" : "My Notes"}
+              {showArchived
+                ? "Archived Notes"
+                : selectedTag
+                ? `#${selectedTag}`
+                : "My Notes"}
             </h1>
             {notes.length > 0 && (
               <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                 {notes.length}
               </span>
+            )}
+            {selectedTag && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onSelectTag(null)}
+                className="h-7 px-2"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             )}
           </div>
           <Button
@@ -123,6 +151,40 @@ function Dashboard({
             )}
           </Button>
         </div>
+
+        {/* Tags Filter Bar */}
+        {allTags.length > 0 && !showArchived && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => onSelectTag(null)}
+                className={cn(
+                  "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                  !selectedTag
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+              >
+                All Notes
+              </button>
+              {allTags.slice(0, 12).map((tag) => (
+                <button
+                  key={tag.name}
+                  onClick={() => onSelectTag(tag.name)}
+                  className={cn(
+                    "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                    selectedTag === tag.name
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  #{tag.name}
+                  <span className="ml-1.5 text-xs opacity-60">{tag.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Empty state */}
         {notes.length === 0 && (
