@@ -1,132 +1,172 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input"
-import { Checkbox } from "../../components/ui/checkbox"
-import { FcGoogle } from "react-icons/fc";
-import { FaFacebook } from "react-icons/fa6";
-import { FaGithub } from "react-icons/fa";
-import { FieldValues, useForm } from "react-hook-form";
-import { Link } from "react-router-dom"
-import "../../styles/Auth.css"
-import { IoEyeOffOutline } from "react-icons/io5";
-import { IoEyeOutline } from "react-icons/io5";
-import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-
-
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { FieldValues, useForm } from "react-hook-form"
+import { Link, useNavigate } from "react-router-dom"
+import { Eye, EyeOff, FileText, Github } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
+import { useState } from "react"
+import axios from "axios"
 
 function Login() {
-  const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm();
+  const navigate = useNavigate()
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm()
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
+
   const onSubmit = async (data: FieldValues) => {
     try {
+      setError("")
       const response = await axios.post("http://localhost:8000/login", {
         email: data.email,
         password: data.password
-      });
-      console.log(response.data);
+      })
       if (!response.data.error) {
-        localStorage.setItem("email", data.email);
-        localStorage.setItem("accessToken", response.data.accessToken);
-        navigate("/dashboard");
+        localStorage.setItem("email", data.email)
+        localStorage.setItem("accessToken", response.data.accessToken)
+        navigate("/dashboard")
       } else {
-        console.log("Error: ", response.data.message);
+        setError(response.data.message || "Login failed")
       }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.log("Axios Error:  ", error.response?.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Invalid credentials")
       } else {
-        console.log("Unexpected Error: ", error);
+        setError("An unexpected error occurred")
       }
-      reset();
+      reset()
     }
-  }
-  const [showPassword, setShowPassword] = useState(false);
-  const togglePassword = () => {
-    setShowPassword(!showPassword);
   }
 
   return (
-    <div className="authContainer" >
-      <div className="content d-flex justify-content-center align-items-center">
-        <Card className="loginCard">
-          <CardHeader className="loginHeader">
-            <CardTitle style={{ color: "rgb(0, 209, 205)" }}>Log in</CardTitle>
-            <CardDescription>Glad you are back!</CardDescription>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary">
+            <FileText className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-2xl">NoteSync</span>
+        </Link>
+
+        <Card className="border shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardDescription>
+              Enter your credentials to access your account
+            </CardDescription>
           </CardHeader>
-          <CardContent className="cardContent">
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Input placeholder="Email"
-                {
-                ...register("email", {
-                  required: "Email is required",
-                  pattern: {
-                    value: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
-                    message: "Invalid email format"
-                  }
-                })
-                }
-                type="email"
-              />
-              {errors.email && <CardDescription className="error">{`${errors.email.message}`}</CardDescription>}
-              <br />
-              <div className="password">
-                <Input placeholder="Password"
-                  {
-                  ...register("password", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters"
-                    }
-                  })
-                  }
-                  type={showPassword ? "text" : "password"}
-                />
-                <div className="eye" onClick={togglePassword}>
-                  {showPassword ? <IoEyeOutline /> : <IoEyeOffOutline />}
-                </div>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                {error}
               </div>
-              {errors.password && <CardDescription className="error">{`${errors.password.message}`}</CardDescription>}
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="email">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
+                      message: "Invalid email format"
+                    }
+                  })}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{`${errors.email.message}`}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    {...register("password", {
+                      required: "Password is required",
+                      minLength: {
+                        value: 6,
+                        message: "Password must be at least 6 characters"
+                      }
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{`${errors.password.message}`}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Checkbox id="remember" />
+                  <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                    Remember me
+                  </label>
+                </div>
+                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
             </form>
-            <br />
-            <div className="remember">
-              <Checkbox />
-              <CardDescription>Remember me</CardDescription>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
             </div>
-            <br />
-            <button className="logInBtn"
-              disabled={isSubmitting}
-              onClick={handleSubmit(onSubmit)}
-            >Log in</button>
-            <CardDescription className="forgot">Forgot password?</CardDescription>
-            <br />
-            <div className="or">
-              <div className="hrContainer"><hr /></div>
-              <CardDescription>Or</CardDescription>
-              <div className="hrContainer"><hr /></div>
-            </div>
-            <div className="icons">
-              <FcGoogle />
-              <FaFacebook />
-              <FaGithub />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" type="button">
+                <FcGoogle className="h-4 w-4 mr-2" />
+                Google
+              </Button>
+              <Button variant="outline" type="button">
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </Button>
             </div>
           </CardContent>
-          <CardFooter className="cardFooter">
-            <CardDescription>Don't have an account? <span className="switch"><Link to="/register">Sign up</Link></span></CardDescription>
+          <CardFooter className="flex justify-center">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary font-medium hover:underline">
+                Sign up
+              </Link>
+            </p>
           </CardFooter>
         </Card>
       </div>
     </div>
   )
-
 }
 
 export default Login

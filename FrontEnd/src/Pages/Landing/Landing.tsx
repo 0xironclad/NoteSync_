@@ -155,7 +155,11 @@ function Landing() {
               <p className="mb-8 opacity-90">
                 Join thousands of users who organize their thoughts with NoteSync.
               </p>
-              <Button variant="secondary" size="lg" asChild>
+              <Button
+                size="lg"
+                className="bg-white text-primary hover:bg-white/90"
+                asChild
+              >
                 <Link to="/register">
                   Create Your Account
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -170,17 +174,31 @@ function Landing() {
       <footer className="py-8 border-t">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              © 2024 NoteSync. All rights reserved.
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-6 h-6 rounded bg-primary">
+                <FileText className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <span className="text-sm text-muted-foreground">
+                © 2024 NoteSync. All rights reserved.
+              </span>
+            </div>
             <div className="flex gap-6">
-              <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                to="/about"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
                 About
               </Link>
-              <Link to="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                to="/features"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
                 Features
               </Link>
-              <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                to="/contact"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
                 Contact
               </Link>
             </div>
