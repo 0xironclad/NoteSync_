@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button"
 import SearchBar from "./Searchbar/SearchBar"
 import AxiosInstance from "../utils/AxiosInstance"
 
-function Navbar() {
-  const [searchQuery, setSearchQuery] = useState("")
+interface NavbarProps {
+  onSearch?: (query: string) => void
+  searchQuery?: string
+}
+
+function Navbar({ onSearch, searchQuery: externalQuery }: NavbarProps) {
+  const [internalQuery, setInternalQuery] = useState("")
   const [username, setUsername] = useState("")
+
+  // Use external query if provided, otherwise use internal state
+  const searchQuery = externalQuery ?? internalQuery
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -28,11 +36,20 @@ function Navbar() {
     fetchUser()
   }, [])
 
-  const onClearSearch = () => {
-    setSearchQuery("")
+  const handleSearchChange = (value: string) => {
+    if (externalQuery === undefined) {
+      setInternalQuery(value)
+    }
   }
 
-  const onSearch = () => {}
+  const onClearSearch = () => {
+    handleSearchChange("")
+    onSearch?.("")
+  }
+
+  const handleSearch = () => {
+    onSearch?.(searchQuery)
+  }
 
   const onLogout = async () => {
     try {
@@ -74,10 +91,12 @@ function Navbar() {
             <SearchBar
               value={searchQuery}
               onChange={({ target }) => {
-                setSearchQuery(target.value)
+                handleSearchChange(target.value)
+                // Trigger search on each keystroke for live filtering
+                onSearch?.(target.value)
               }}
               onClearSearch={onClearSearch}
-              onSearch={onSearch}
+              onSearch={handleSearch}
             />
           </div>
 
