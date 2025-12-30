@@ -10,7 +10,7 @@ import axios from "axios"
 
 function Register() {
   const navigate = useNavigate()
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm()
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
 
@@ -23,7 +23,10 @@ function Register() {
         password: data.password
       })
       if (!response.data.error) {
-        navigate("/login")
+        // Auto-login: store the token and email, then redirect to dashboard
+        localStorage.setItem("email", data.email)
+        localStorage.setItem("accessToken", response.data.accessToken)
+        navigate("/dashboard")
       } else {
         setError(response.data.message || "Registration failed")
       }
@@ -33,7 +36,6 @@ function Register() {
       } else {
         setError("An unexpected error occurred")
       }
-      reset()
     }
   }
 
@@ -41,11 +43,11 @@ function Register() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
+        <Link to="/" className="flex items-center justify-center gap-2 mb-8 no-underline">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary">
             <FileText className="h-6 w-6 text-primary-foreground" />
           </div>
-          <span className="font-bold text-2xl">NoteSync</span>
+          <span className="font-bold text-2xl text-foreground">NoteSync</span>
         </Link>
 
         <Card className="border shadow-lg">
@@ -137,9 +139,9 @@ function Register() {
 
               <p className="text-xs text-muted-foreground">
                 By creating an account, you agree to our{" "}
-                <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
+                <span className="text-primary cursor-pointer hover:opacity-80">Terms of Service</span>
                 {" "}and{" "}
-                <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                <span className="text-primary cursor-pointer hover:opacity-80">Privacy Policy</span>
               </p>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -172,7 +174,7 @@ function Register() {
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary font-medium hover:underline">
+              <Link to="/login" className="text-primary font-medium hover:opacity-80">
                 Sign in
               </Link>
             </p>
