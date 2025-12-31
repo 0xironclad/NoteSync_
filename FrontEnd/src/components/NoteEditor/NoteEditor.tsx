@@ -16,8 +16,10 @@ import {
   ChevronUp,
   ListTodo,
   Settings2,
+  GripVertical,
 } from "lucide-react"
 import { Note, NoteColor, NotePriority, ChecklistItem, NOTE_COLORS, PRIORITY_CONFIG } from "@/types/note"
+import { cn } from "@/lib/utils"
 
 interface NoteEditorProps {
   open: boolean
@@ -211,75 +213,158 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
             placeholder="Add tags..."
           />
 
-          {/* Checklist Section - Collapsible */}
-          <div className="border rounded-lg">
+          {/* Checklist Section - Enhanced Design */}
+          <div className="border rounded-xl overflow-hidden">
             <button
               type="button"
               onClick={() => setShowChecklist(!showChecklist)}
-              className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+              className={cn(
+                "w-full flex items-center justify-between p-3.5 transition-colors",
+                showChecklist ? "bg-muted/30" : "hover:bg-muted/30"
+              )}
             >
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <ListTodo className="h-4 w-4" />
-                Checklist
+              <span className="flex items-center gap-2.5 text-sm font-medium">
+                <div className={cn(
+                  "p-1.5 rounded-lg",
+                  checklist.length > 0
+                    ? checklist.every(i => i.isCompleted)
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                      : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  <ListTodo className="h-4 w-4" />
+                </div>
+                <span>Tasks</span>
                 {checklist.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    ({checklist.filter(i => i.isCompleted).length}/{checklist.length})
+                  <span className={cn(
+                    "text-xs px-2 py-0.5 rounded-full font-medium",
+                    checklist.every(i => i.isCompleted)
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                      : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                  )}>
+                    {checklist.filter(i => i.isCompleted).length}/{checklist.length}
                   </span>
                 )}
               </span>
-              {showChecklist ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <ChevronDown className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                showChecklist && "rotate-180"
+              )} />
             </button>
 
             {showChecklist && (
-              <div className="px-3 pb-3 space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={checklistInput}
-                    onChange={(e) => setChecklistInput(e.target.value)}
-                    placeholder="Add item..."
-                    className="h-9"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        handleAddChecklistItem()
-                      }
-                    }}
-                  />
-                  <Button type="button" variant="secondary" size="sm" onClick={handleAddChecklistItem}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+              <div className="border-t">
+                {/* Add new task input */}
+                <div className="p-3 bg-muted/20">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        value={checklistInput}
+                        onChange={(e) => setChecklistInput(e.target.value)}
+                        placeholder="Add a task..."
+                        className="h-10 pl-10 pr-4 bg-background"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleAddChecklistItem()
+                          }
+                        }}
+                      />
+                      <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="default"
+                      onClick={handleAddChecklistItem}
+                      disabled={!checklistInput.trim()}
+                      className="px-4"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Press Enter to add quickly. Great for to-dos, meeting notes, and daily planning.
+                  </p>
                 </div>
 
+                {/* Task list */}
                 {checklist.length > 0 && (
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {checklist.map(item => (
+                  <div className="divide-y">
+                    {checklist.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 group"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 group transition-colors",
+                          item.isCompleted ? "bg-muted/20" : "hover:bg-muted/30"
+                        )}
                       >
+                        <GripVertical className="h-4 w-4 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
                         <button
                           type="button"
                           onClick={() => handleToggleChecklistItem(item.id)}
-                          className={`shrink-0 w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${
+                          className={cn(
+                            "shrink-0 w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center",
+                            "hover:scale-110 active:scale-95",
                             item.isCompleted
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-muted-foreground/30 hover:border-primary"
-                          }`}
+                              ? "bg-emerald-500 border-emerald-500 text-white"
+                              : "border-slate-300 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500"
+                          )}
                         >
                           {item.isCompleted && <Check className="h-3 w-3" strokeWidth={3} />}
                         </button>
-                        <span className={`flex-1 text-sm ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                        <span className={cn(
+                          "flex-1 text-sm transition-all duration-200",
+                          item.isCompleted && "line-through text-muted-foreground"
+                        )}>
                           {item.text}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleRemoveChecklistItem(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Progress summary */}
+                {checklist.length > 0 && (
+                  <div className="px-3 py-3 bg-muted/20 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {checklist.filter(i => i.isCompleted).length} of {checklist.length} completed
+                      </span>
+                      {checklist.every(i => i.isCompleted) && (
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <Check className="h-3 w-3" /> All done!
+                        </span>
+                      )}
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500 ease-out",
+                          checklist.every(i => i.isCompleted) ? "bg-emerald-500" : "bg-amber-500"
+                        )}
+                        style={{ width: `${(checklist.filter(i => i.isCompleted).length / checklist.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {checklist.length === 0 && (
+                  <div className="px-3 py-8 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                      <ListTodo className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No tasks yet. Add your first task above.
+                    </p>
                   </div>
                 )}
               </div>

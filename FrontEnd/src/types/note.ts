@@ -173,7 +173,7 @@ export const SMART_VIEWS: SmartViewConfig[] = [
   { id: "recent", label: "Recent", icon: "Clock", description: "Updated in the last 7 days", section: "main" },
   { id: "pinned", label: "Pinned", icon: "Pin", description: "Your pinned notes", section: "main" },
   // Organize views
-  { id: "withTasks", label: "With Tasks", icon: "CheckSquare", description: "Notes with incomplete tasks", section: "organize" },
+  { id: "withTasks", label: "With Tasks", icon: "CheckSquare", description: "Notes with to-dos still in progress", section: "organize" },
   { id: "untagged", label: "Untagged", icon: "TagOff", description: "Notes without tags", section: "organize" },
   // Status views
   { id: "highPriority", label: "High Priority", icon: "AlertCircle", description: "High priority notes", section: "status" },
