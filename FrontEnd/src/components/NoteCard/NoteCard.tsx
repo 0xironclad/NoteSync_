@@ -28,6 +28,7 @@ const NoteTypeIndicator = ({ type }: { type: NoteType }) => {
 
 interface NoteCardProps {
     note: Note
+    onView: () => void
     onEdit: () => void
     onDelete: () => void
     onPin: () => void
@@ -35,7 +36,7 @@ interface NoteCardProps {
     onToggleChecklistItem: (itemId: string) => void
 }
 
-function NoteCard({ note, onEdit, onDelete, onPin, onArchive, onToggleChecklistItem }: NoteCardProps) {
+function NoteCard({ note, onView, onEdit, onDelete, onPin, onArchive, onToggleChecklistItem }: NoteCardProps) {
     const colors = NOTE_COLORS[note.color] || NOTE_COLORS.default
     const priority = PRIORITY_CONFIG[note.priority]
 
@@ -55,7 +56,7 @@ function NoteCard({ note, onEdit, onDelete, onPin, onArchive, onToggleChecklistI
     return (
         <Card
             className={`group relative w-full overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer ${colors.card} ${colors.border}`}
-            onClick={onEdit}
+            onClick={onView}
         >
             {/* Color accent bar */}
             <div className={`absolute top-0 left-0 right-0 h-1 ${colors.accent}`} />

@@ -21,6 +21,7 @@ import {
   Lightbulb,
   CheckSquare,
   BookOpen,
+  Edit2,
 } from "lucide-react"
 import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, NOTE_COLORS, PRIORITY_CONFIG, NOTE_TYPES } from "@/types/note"
 import { cn } from "@/lib/utils"
@@ -226,9 +227,24 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
         <div className={`h-1.5 rounded-t-xl ${colors.accent}`} />
 
         <DialogHeader className="px-6 pt-4 pb-2">
-          <DialogTitle className="text-xl">
-            {note ? "Edit Note" : "New Note"}
+          <DialogTitle className="text-xl flex items-center gap-2">
+            {note ? (
+              <>
+                <Edit2 className="h-5 w-5 text-muted-foreground" />
+                Edit Note
+              </>
+            ) : (
+              <>
+                <Plus className="h-5 w-5 text-muted-foreground" />
+                New Note
+              </>
+            )}
           </DialogTitle>
+          {note && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Press Escape to discard changes, or save when done
+            </p>
+          )}
         </DialogHeader>
 
         <div className="px-6 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">

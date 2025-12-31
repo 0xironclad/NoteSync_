@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Navbar from "./Navbar"
 import NoteCard from "./NoteCard/NoteCard"
 import NoteEditor from "./NoteEditor/NoteEditor"
+import NoteViewer from "./NoteViewer/NoteViewer"
 import { Button } from "@/components/ui/button"
 import {
   Plus,
@@ -90,6 +91,8 @@ function Dashboard({
 }: DashboardProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewingNote, setViewingNote] = useState<Note | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Close sidebar on mobile by default
@@ -104,14 +107,42 @@ function Dashboard({
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
+  // Keep viewing note in sync with notes array (for updates like checklist toggles)
+  useEffect(() => {
+    if (viewingNote) {
+      const updatedNote = notes.find((n) => n._id === viewingNote._id)
+      if (updatedNote) {
+        setViewingNote(updatedNote)
+      }
+    }
+  }, [notes, viewingNote?._id])
+
   const handleOpenCreate = () => {
     setEditingNote(null)
     setEditorOpen(true)
   }
 
+  // Open note in reading mode (viewer)
+  const handleOpenView = (note: Note) => {
+    setViewingNote(note)
+    setViewerOpen(true)
+  }
+
+  // Open note in edit mode (editor)
   const handleOpenEdit = (note: Note) => {
+    setViewerOpen(false)
+    setViewingNote(null)
     setEditingNote(note)
     setEditorOpen(true)
+  }
+
+  // Transition from viewer to editor
+  const handleEditFromViewer = () => {
+    if (viewingNote) {
+      setViewerOpen(false)
+      setEditingNote(viewingNote)
+      setEditorOpen(true)
+    }
   }
 
   const handleSaveNote = async (data: NoteFormData) => {
@@ -121,6 +152,29 @@ function Dashboard({
       await onCreateNote(data)
     }
   }
+
+  // Navigation between notes in viewer
+  const handleNavigate = useCallback(
+    (direction: "prev" | "next") => {
+      if (!viewingNote) return
+
+      const currentIndex = notes.findIndex((n) => n._id === viewingNote._id)
+      if (currentIndex === -1) return
+
+      const newIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1
+      if (newIndex >= 0 && newIndex < notes.length) {
+        setViewingNote(notes[newIndex])
+      }
+    },
+    [viewingNote, notes]
+  )
+
+  // Calculate navigation state
+  const viewingNoteIndex = viewingNote
+    ? notes.findIndex((n) => n._id === viewingNote._id)
+    : -1
+  const canNavigatePrev = viewingNoteIndex > 0
+  const canNavigateNext = viewingNoteIndex < notes.length - 1 && viewingNoteIndex !== -1
 
   const pinnedNotes = notes.filter(note => note.isPinned)
   const unpinnedNotes = notes.filter(note => !note.isPinned)
@@ -161,7 +215,29 @@ function Dashboard({
         </Button>
       </div>
 
-      {/* Note Editor Dialog */}
+      {/* Note Viewer Dialog (Reading Mode) */}
+      <NoteViewer
+        note={viewingNote}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        onEdit={handleEditFromViewer}
+        onPin={() => viewingNote && onPinNote(viewingNote._id, viewingNote.isPinned)}
+        onArchive={() => viewingNote && onArchiveNote(viewingNote._id, viewingNote.isArchived)}
+        onDelete={() => {
+          if (viewingNote) {
+            onDeleteNote(viewingNote._id)
+            setViewerOpen(false)
+          }
+        }}
+        onToggleChecklistItem={(itemId) =>
+          viewingNote && onToggleChecklistItem(viewingNote._id, itemId)
+        }
+        onNavigate={handleNavigate}
+        canNavigatePrev={canNavigatePrev}
+        canNavigateNext={canNavigateNext}
+      />
+
+      {/* Note Editor Dialog (Editing Mode) */}
       <NoteEditor
         open={editorOpen}
         onOpenChange={setEditorOpen}
@@ -420,6 +496,7 @@ function Dashboard({
                   <NoteCard
                     key={note._id}
                     note={note}
+                    onView={() => handleOpenView(note)}
                     onEdit={() => handleOpenEdit(note)}
                     onDelete={() => onDeleteNote(note._id)}
                     onPin={() => onPinNote(note._id, note.isPinned)}
@@ -444,6 +521,7 @@ function Dashboard({
                   <NoteCard
                     key={note._id}
                     note={note}
+                    onView={() => handleOpenView(note)}
                     onEdit={() => handleOpenEdit(note)}
                     onDelete={() => onDeleteNote(note._id)}
                     onPin={() => onPinNote(note._id, note.isPinned)}
