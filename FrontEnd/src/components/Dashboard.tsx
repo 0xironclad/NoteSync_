@@ -17,7 +17,8 @@ import {
   Calendar,
   Archive,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS } from "@/types/note"
 import { cn } from "@/lib/utils"
@@ -94,6 +95,15 @@ function Dashboard({
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewingNote, setViewingNote] = useState<Note | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  // Progressive disclosure: collapse advanced sections by default
+  const [showOrganize, setShowOrganize] = useState(false)
+  const [showStatus, setShowStatus] = useState(false)
+  const [showTags, setShowTags] = useState(false)
+
+  // Auto-expand sections that have relevant content
+  const hasOrganizeContent = viewCounts.withTasks > 0 || viewCounts.untagged > 0
+  const hasTagsContent = allTags.length > 0
 
   // Close sidebar on mobile by default
   useEffect(() => {
@@ -277,9 +287,9 @@ function Dashboard({
             </div>
           </div>
 
-          <div className="px-3 space-y-6">
-            {/* Main Views */}
-            <div className="space-y-1">
+          <div className="px-3 space-y-1">
+            {/* Main Views - Always visible, essential navigation */}
+            <div className="space-y-0.5">
               {mainViews.map((view) => (
                 <button
                   key={view.id}
@@ -288,7 +298,7 @@ function Dashboard({
                     if (window.innerWidth < 768) setSidebarOpen(false)
                   }}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                     activeView === view.id && !selectedTag
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -296,116 +306,189 @@ function Dashboard({
                 >
                   <ViewIcon icon={view.icon} className="h-4 w-4 shrink-0" />
                   <span className="flex-1 text-left">{view.label}</span>
-                  <span className={cn(
-                    "text-xs tabular-nums min-w-[20px] text-right",
-                    activeView === view.id && !selectedTag ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {viewCounts[view.id]}
-                  </span>
+                  {viewCounts[view.id] > 0 && (
+                    <span className={cn(
+                      "text-xs tabular-nums px-1.5 py-0.5 rounded-md",
+                      activeView === view.id && !selectedTag
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {viewCounts[view.id]}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            {/* Organize Section */}
-            <div>
-              <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Organize
-              </h3>
-              <div className="space-y-1">
-                {organizeViews.map((view) => (
-                  <button
-                    key={view.id}
-                    onClick={() => {
-                      onSelectView(view.id)
-                      if (window.innerWidth < 768) setSidebarOpen(false)
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                      activeView === view.id && !selectedTag
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <ViewIcon icon={view.icon} className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left">{view.label}</span>
-                    <span className={cn(
-                      "text-xs tabular-nums min-w-[20px] text-right",
-                      activeView === view.id && !selectedTag ? "text-primary-foreground/70" : "text-muted-foreground"
-                    )}>
-                      {viewCounts[view.id]}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status Section */}
-            <div>
-              <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Status
-              </h3>
-              <div className="space-y-1">
-                {statusViews.map((view) => (
-                  <button
-                    key={view.id}
-                    onClick={() => {
-                      onSelectView(view.id)
-                      if (window.innerWidth < 768) setSidebarOpen(false)
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                      activeView === view.id && !selectedTag
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      view.id === "highPriority" && viewCounts.highPriority > 0 && activeView !== view.id && "text-red-500",
-                      view.id === "dueSoon" && viewCounts.dueSoon > 0 && activeView !== view.id && "text-amber-500"
-                    )}
-                  >
-                    <ViewIcon icon={view.icon} className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-left">{view.label}</span>
-                    <span className={cn(
-                      "text-xs tabular-nums min-w-[20px] text-right",
-                      activeView === view.id && !selectedTag ? "text-primary-foreground/70" : ""
-                    )}>
-                      {viewCounts[view.id]}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tags Section */}
-            {allTags.length > 0 && (
-              <div>
-                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Tags
-                </h3>
-                <div className="space-y-1">
-                  {allTags.slice(0, 10).map((tag) => (
+            {/* Organize Section - Collapsible, shown when relevant */}
+            <div className="pt-2">
+              <button
+                onClick={() => setShowOrganize(!showOrganize)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  hasOrganizeContent && !showOrganize && "text-foreground"
+                )}
+              >
+                <ChevronRight className={cn(
+                  "h-3 w-3 transition-transform duration-200",
+                  showOrganize && "rotate-90"
+                )} />
+                <span className="flex-1 text-left">Organize</span>
+                {hasOrganizeContent && !showOrganize && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+              {showOrganize && (
+                <div className="space-y-0.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {organizeViews.map((view) => (
                     <button
-                      key={tag.name}
+                      key={view.id}
                       onClick={() => {
-                        onSelectTag(tag.name)
+                        onSelectView(view.id)
                         if (window.innerWidth < 768) setSidebarOpen(false)
                       }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                        selectedTag === tag.name
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ml-2",
+                        activeView === view.id && !selectedTag
                           ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
-                      <Tag className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 text-left truncate">#{tag.name}</span>
-                      <span className={cn(
-                        "text-xs tabular-nums min-w-[20px] text-right",
-                        selectedTag === tag.name ? "text-primary-foreground/70" : "text-muted-foreground"
-                      )}>
-                        {tag.count}
-                      </span>
+                      <ViewIcon icon={view.icon} className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left">{view.label}</span>
+                      {viewCounts[view.id] > 0 && (
+                        <span className={cn(
+                          "text-xs tabular-nums px-1.5 py-0.5 rounded-md",
+                          activeView === view.id && !selectedTag
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {viewCounts[view.id]}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Status Section - Collapsible, highlights when attention needed */}
+            <div>
+              <button
+                onClick={() => setShowStatus(!showStatus)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  (viewCounts.highPriority > 0 || viewCounts.dueSoon > 0) && !showStatus && "text-amber-600 dark:text-amber-400"
+                )}
+              >
+                <ChevronRight className={cn(
+                  "h-3 w-3 transition-transform duration-200",
+                  showStatus && "rotate-90"
+                )} />
+                <span className="flex-1 text-left">Status</span>
+                {(viewCounts.highPriority > 0 || viewCounts.dueSoon > 0) && !showStatus && (
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                    viewCounts.highPriority > 0 ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                  )}>
+                    {viewCounts.highPriority + viewCounts.dueSoon}
+                  </span>
+                )}
+              </button>
+              {showStatus && (
+                <div className="space-y-0.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {statusViews.map((view) => (
+                    <button
+                      key={view.id}
+                      onClick={() => {
+                        onSelectView(view.id)
+                        if (window.innerWidth < 768) setSidebarOpen(false)
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ml-2",
+                        activeView === view.id && !selectedTag
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        view.id === "highPriority" && viewCounts.highPriority > 0 && activeView !== view.id && "text-red-500",
+                        view.id === "dueSoon" && viewCounts.dueSoon > 0 && activeView !== view.id && "text-amber-500"
+                      )}
+                    >
+                      <ViewIcon icon={view.icon} className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 text-left">{view.label}</span>
+                      {viewCounts[view.id] > 0 && (
+                        <span className={cn(
+                          "text-xs tabular-nums px-1.5 py-0.5 rounded-md",
+                          activeView === view.id && !selectedTag
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : view.id === "highPriority" ? "bg-red-100 dark:bg-red-900/30 text-red-600"
+                            : view.id === "dueSoon" ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {viewCounts[view.id]}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tags Section - Collapsible, only shown when tags exist */}
+            {hasTagsContent && (
+              <div>
+                <button
+                  onClick={() => setShowTags(!showTags)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
+                    "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <ChevronRight className={cn(
+                    "h-3 w-3 transition-transform duration-200",
+                    showTags && "rotate-90"
+                  )} />
+                  <span className="flex-1 text-left">Tags</span>
+                  {!showTags && (
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {allTags.length}
+                    </span>
+                  )}
+                </button>
+                {showTags && (
+                  <div className="space-y-0.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {allTags.slice(0, 8).map((tag) => (
+                      <button
+                        key={tag.name}
+                        onClick={() => {
+                          onSelectTag(tag.name)
+                          if (window.innerWidth < 768) setSidebarOpen(false)
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ml-2",
+                          selectedTag === tag.name
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <Tag className="h-3.5 w-3.5 shrink-0" />
+                        <span className="flex-1 text-left truncate text-sm">#{tag.name}</span>
+                        <span className={cn(
+                          "text-xs tabular-nums",
+                          selectedTag === tag.name ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>
+                          {tag.count}
+                        </span>
+                      </button>
+                    ))}
+                    {allTags.length > 8 && (
+                      <p className="text-xs text-muted-foreground px-3 py-1 ml-2">
+                        +{allTags.length - 8} more tags
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
