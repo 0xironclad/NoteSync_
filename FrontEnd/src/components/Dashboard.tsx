@@ -18,11 +18,12 @@ import {
   PanelLeftClose,
   PanelLeft
 } from "lucide-react"
-import { Note, NoteColor, NotePriority, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS } from "@/types/note"
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS } from "@/types/note"
 import { cn } from "@/lib/utils"
 
 interface NoteFormData {
   title: string
+  noteType: NoteType
   content: string
   tags: string[]
   color: NoteColor

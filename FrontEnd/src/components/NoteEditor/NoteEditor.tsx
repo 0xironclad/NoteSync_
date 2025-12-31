@@ -17,8 +17,12 @@ import {
   ListTodo,
   Settings2,
   GripVertical,
+  FileText,
+  Lightbulb,
+  CheckSquare,
+  BookOpen,
 } from "lucide-react"
-import { Note, NoteColor, NotePriority, ChecklistItem, NOTE_COLORS, PRIORITY_CONFIG } from "@/types/note"
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, NOTE_COLORS, PRIORITY_CONFIG, NOTE_TYPES } from "@/types/note"
 import { cn } from "@/lib/utils"
 
 interface NoteEditorProps {
@@ -30,6 +34,7 @@ interface NoteEditorProps {
 
 interface NoteFormData {
   title: string
+  noteType: NoteType
   content: string
   tags: string[]
   color: NoteColor
@@ -37,6 +42,17 @@ interface NoteFormData {
   dueDate: string | null
   reminder: string | null
   checklist: ChecklistItem[]
+}
+
+// Icon mapping for note types
+const NoteTypeIcon = ({ type, className }: { type: NoteType; className?: string }) => {
+  const icons: Record<NoteType, React.ReactNode> = {
+    note: <FileText className={className} />,
+    idea: <Lightbulb className={className} />,
+    task: <CheckSquare className={className} />,
+    reference: <BookOpen className={className} />,
+  }
+  return icons[type]
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -63,6 +79,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9)
  */
 function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
   const [title, setTitle] = useState("")
+  const [noteType, setNoteType] = useState<NoteType>("note")
   const [content, setContent] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [color, setColor] = useState<NoteColor>("default")
@@ -76,10 +93,14 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
   const [showOptions, setShowOptions] = useState(false)
   const [showChecklist, setShowChecklist] = useState(false)
 
+  // Get current type configuration
+  const currentTypeConfig = NOTE_TYPES.find(t => t.id === noteType) || NOTE_TYPES[0]
+
   useEffect(() => {
     if (open) {
       if (note) {
         setTitle(note.title)
+        setNoteType(note.noteType || "note")
         setContent(note.content)
         setTags(note.tags)
         setColor(note.color)
@@ -95,8 +116,33 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
     }
   }, [open, note])
 
+  // Apply smart defaults when note type changes (only for new notes)
+  const handleNoteTypeChange = (newType: NoteType) => {
+    setNoteType(newType)
+
+    // Only apply defaults for new notes (not editing)
+    if (!note) {
+      const typeConfig = NOTE_TYPES.find(t => t.id === newType)
+      if (typeConfig) {
+        // Apply suggested color if current is default
+        if (color === "default" && typeConfig.defaults.suggestColor !== "default") {
+          setColor(typeConfig.defaults.suggestColor)
+        }
+        // Apply suggested priority if current is none
+        if (priority === "none" && typeConfig.defaults.suggestPriority !== "none") {
+          setPriority(typeConfig.defaults.suggestPriority)
+        }
+        // Expand checklist section for task type
+        if (typeConfig.defaults.expandChecklist) {
+          setShowChecklist(true)
+        }
+      }
+    }
+  }
+
   const resetForm = () => {
     setTitle("")
+    setNoteType("note")
     setContent("")
     setTags([])
     setColor("default")
@@ -140,6 +186,7 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
     try {
       await onSave({
         title: title.trim(),
+        noteType,
         content,
         tags,
         color,
@@ -185,12 +232,32 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
         </DialogHeader>
 
         <div className="px-6 pb-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Note Type Selector - Subtle, horizontal pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-muted/50 rounded-lg w-fit">
+            {NOTE_TYPES.map((type) => (
+              <button
+                key={type.id}
+                type="button"
+                onClick={() => handleNoteTypeChange(type.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200",
+                  noteType === type.id
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <NoteTypeIcon type={type.id} className="h-3.5 w-3.5" />
+                {type.label}
+              </button>
+            ))}
+          </div>
+
           {/* Title - Large, prominent input */}
           <div>
             <Input
               value={title}
               onChange={(e) => { setTitle(e.target.value); setErrors({}) }}
-              placeholder="Note title"
+              placeholder={currentTypeConfig.placeholder.split("...")[0] + " title"}
               className={`text-lg font-medium h-12 border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary ${errors.title ? "border-red-500" : ""}`}
             />
             {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
@@ -201,16 +268,17 @@ function NoteEditor({ open, onOpenChange, note, onSave }: NoteEditorProps) {
             <MarkdownEditor
               value={content}
               onChange={setContent}
-              placeholder="Start writing... (Markdown supported)"
+              placeholder={currentTypeConfig.placeholder}
               minHeight="180px"
             />
           </div>
 
-          {/* Tags - Enhanced with suggestions */}
+          {/* Tags - Enhanced with suggestions based on note type */}
           <TagInput
             tags={tags}
             onChange={setTags}
             placeholder="Add tags..."
+            suggestedTags={currentTypeConfig.suggestedTags}
           />
 
           {/* Checklist Section - Enhanced Design */}

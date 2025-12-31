@@ -17,6 +17,16 @@ const NoteSchema = new mongoose.Schema({
     maxlength: 200,
   },
 
+  // Note Type: Lightweight categorization that influences defaults
+  // Justification: Note types provide subtle UX hints without rigid rules.
+  // Each type can suggest different defaults (e.g., tasks auto-expand checklist)
+  // but users can always customize. This is about intent, not enforcement.
+  noteType: {
+    type: String,
+    enum: ["note", "idea", "task", "reference"],
+    default: "note",
+  },
+
   // Content: Plain text content for the note body
   // Justification: Simple text allows flexibility - users can structure content as they wish
   content: {

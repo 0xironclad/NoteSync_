@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import AxiosInstance from "../utils/AxiosInstance";
 import Dashboard from "./Dashboard";
-import { Note, NoteColor, NotePriority, ChecklistItem, SmartViewType, SmartViewCounts } from "@/types/note";
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts } from "@/types/note";
 import { toast } from "sonner";
 
 interface NoteFormData {
   title: string;
+  noteType: NoteType;
   content: string;
   tags: string[];
   color: NoteColor;

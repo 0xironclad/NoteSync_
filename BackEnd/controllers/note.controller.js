@@ -4,6 +4,7 @@ const Note = require("../models/note.model");
 const addNote = async (req, res) => {
   const {
     title,
+    noteType,
     content,
     tags,
     color,
@@ -23,6 +24,7 @@ const addNote = async (req, res) => {
     }
     const note = new Note({
       title,
+      noteType: noteType || "note",
       content: content || "",
       tags: tags || [],
       color: color || "default",
@@ -51,6 +53,7 @@ const editNote = async (req, res) => {
   const { noteId } = req.params;
   const {
     title,
+    noteType,
     content,
     tags,
     color,
@@ -74,6 +77,7 @@ const editNote = async (req, res) => {
 
     // Update fields if provided (allowing empty strings and false values)
     if (title !== undefined) note.title = title;
+    if (noteType !== undefined) note.noteType = noteType;
     if (content !== undefined) note.content = content;
     if (tags !== undefined) note.tags = tags;
     if (color !== undefined) note.color = color;

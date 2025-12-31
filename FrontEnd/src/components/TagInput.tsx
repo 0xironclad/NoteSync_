@@ -14,6 +14,7 @@ interface TagInputProps {
   onChange: (tags: string[]) => void
   placeholder?: string
   className?: string
+  suggestedTags?: string[]
 }
 
 /**
@@ -27,7 +28,7 @@ interface TagInputProps {
  * - Backspace to remove last tag
  * - Comma or Enter to add new tag
  */
-function TagInput({ tags, onChange, placeholder = "Add tags...", className }: TagInputProps) {
+function TagInput({ tags, onChange, placeholder = "Add tags...", className, suggestedTags = [] }: TagInputProps) {
   const [input, setInput] = useState("")
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -72,13 +73,21 @@ function TagInput({ tags, onChange, placeholder = "Add tags...", className }: Ta
       setShowSuggestions(filtered.length > 0)
       setSelectedIndex(-1)
     } else {
-      // Show popular tags when focused but no input
+      // Show suggested tags first (from note type), then popular tags
+      const typeTagSuggestions: TagSuggestion[] = suggestedTags
+        .filter(t => !tags.includes(t))
+        .map(t => {
+          const existing = allTags.find(at => at.name === t)
+          return { name: t, count: existing?.count || 0 }
+        })
+
       const popular = allTags
-        .filter(t => !tags.includes(t.name))
-        .slice(0, 6)
-      setSuggestions(popular)
+        .filter(t => !tags.includes(t.name) && !suggestedTags.includes(t.name))
+        .slice(0, 6 - typeTagSuggestions.length)
+
+      setSuggestions([...typeTagSuggestions, ...popular])
     }
-  }, [input, allTags, tags])
+  }, [input, allTags, tags, suggestedTags])
 
   const normalizeTag = (tag: string) => {
     return tag.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
@@ -175,7 +184,12 @@ function TagInput({ tags, onChange, placeholder = "Add tags...", className }: Ta
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border rounded-lg shadow-lg overflow-hidden animate-in fade-in-0 slide-in-from-top-2">
           <div className="p-1">
-            {input.trim() === "" && (
+            {input.trim() === "" && suggestedTags.length > 0 && (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">
+                Suggested tags
+              </div>
+            )}
+            {input.trim() === "" && suggestedTags.length === 0 && (
               <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">
                 Popular tags
               </div>

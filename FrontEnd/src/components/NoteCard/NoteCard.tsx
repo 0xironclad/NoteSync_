@@ -1,8 +1,30 @@
-import { Pin, Trash2, Edit2, Archive, Calendar, Clock, Check, Flag, ListTodo } from "lucide-react"
+import { Pin, Trash2, Edit2, Archive, Calendar, Clock, Check, Flag, ListTodo, FileText, Lightbulb, CheckSquare, BookOpen } from "lucide-react"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
-import { Note, NOTE_COLORS, PRIORITY_CONFIG } from "@/types/note"
+import { Note, NOTE_COLORS, PRIORITY_CONFIG, NoteType } from "@/types/note"
 import MarkdownRenderer from "@/components/MarkdownRenderer"
 import { cn } from "@/lib/utils"
+
+// Subtle note type indicator
+const NoteTypeIndicator = ({ type }: { type: NoteType }) => {
+    const config: Record<NoteType, { icon: React.ReactNode; label: string; color: string }> = {
+        note: { icon: <FileText className="h-3 w-3" />, label: "Note", color: "text-slate-400" },
+        idea: { icon: <Lightbulb className="h-3 w-3" />, label: "Idea", color: "text-amber-500" },
+        task: { icon: <CheckSquare className="h-3 w-3" />, label: "Task", color: "text-emerald-500" },
+        reference: { icon: <BookOpen className="h-3 w-3" />, label: "Reference", color: "text-blue-500" },
+    }
+
+    const { icon, label, color } = config[type] || config.note
+
+    // Don't show indicator for regular notes (most common type)
+    if (type === "note") return null
+
+    return (
+        <span className={cn("inline-flex items-center gap-1 text-xs", color)}>
+            {icon}
+            <span className="font-medium">{label}</span>
+        </span>
+    )
+}
 
 interface NoteCardProps {
     note: Note
@@ -49,13 +71,16 @@ function NoteCard({ note, onEdit, onDelete, onPin, onArchive, onToggleChecklistI
                         <h3 className={`font-semibold text-base leading-snug line-clamp-2 ${colors.text}`}>
                             {note.title}
                         </h3>
-                        <p className={`text-xs mt-1 ${colors.muted}`}>
-                            {new Date(note.updatedAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                            })}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className={`text-xs ${colors.muted}`}>
+                                {new Date(note.updatedAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                })}
+                            </p>
+                            <NoteTypeIndicator type={note.noteType || "note"} />
+                        </div>
                     </div>
                     <button
                         onClick={(e) => { e.stopPropagation(); onPin(); }}

@@ -2,6 +2,8 @@ export type NoteColor = "default" | "red" | "orange" | "yellow" | "green" | "blu
 
 export type NotePriority = "none" | "low" | "medium" | "high";
 
+export type NoteType = "note" | "idea" | "task" | "reference";
+
 export interface ChecklistItem {
   id: string;
   text: string;
@@ -11,6 +13,7 @@ export interface ChecklistItem {
 export interface Note {
   _id: string;
   title: string;
+  noteType: NoteType;
   content: string;
   tags: string[];
   color: NoteColor;
@@ -27,6 +30,7 @@ export interface Note {
 
 export interface NoteFormData {
   title: string;
+  noteType: NoteType;
   content: string;
   tags: string[];
   color: NoteColor;
@@ -179,4 +183,75 @@ export const SMART_VIEWS: SmartViewConfig[] = [
   { id: "highPriority", label: "High Priority", icon: "AlertCircle", description: "High priority notes", section: "status" },
   { id: "dueSoon", label: "Due Soon", icon: "Calendar", description: "Due within 7 days", section: "status" },
   { id: "archived", label: "Archived", icon: "Archive", description: "Your archived notes", section: "status" },
+];
+
+// Note Type Configuration
+// Each type subtly influences the note creation experience without rigid rules
+export interface NoteTypeConfig {
+  id: NoteType;
+  label: string;
+  icon: string;
+  description: string;
+  placeholder: string;
+  suggestedTags: string[];
+  defaults: {
+    expandChecklist: boolean;
+    suggestPriority: NotePriority;
+    suggestColor: NoteColor;
+  };
+}
+
+export const NOTE_TYPES: NoteTypeConfig[] = [
+  {
+    id: "note",
+    label: "Note",
+    icon: "FileText",
+    description: "General purpose notes",
+    placeholder: "Start writing your thoughts...",
+    suggestedTags: ["personal", "work", "meeting"],
+    defaults: {
+      expandChecklist: false,
+      suggestPriority: "none",
+      suggestColor: "default",
+    },
+  },
+  {
+    id: "idea",
+    label: "Idea",
+    icon: "Lightbulb",
+    description: "Capture inspiration",
+    placeholder: "What's the big idea?",
+    suggestedTags: ["brainstorm", "concept", "innovation", "creative"],
+    defaults: {
+      expandChecklist: false,
+      suggestPriority: "none",
+      suggestColor: "yellow",
+    },
+  },
+  {
+    id: "task",
+    label: "Task",
+    icon: "CheckSquare",
+    description: "Action items & to-dos",
+    placeholder: "What needs to be done?",
+    suggestedTags: ["todo", "action", "followup", "deadline"],
+    defaults: {
+      expandChecklist: true,
+      suggestPriority: "medium",
+      suggestColor: "default",
+    },
+  },
+  {
+    id: "reference",
+    label: "Reference",
+    icon: "BookOpen",
+    description: "Information to keep",
+    placeholder: "Document important information...",
+    suggestedTags: ["documentation", "howto", "guide", "resource"],
+    defaults: {
+      expandChecklist: false,
+      suggestPriority: "none",
+      suggestColor: "blue",
+    },
+  },
 ];
