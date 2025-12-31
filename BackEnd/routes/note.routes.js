@@ -10,7 +10,9 @@ const {
   searchNote,
   toggleChecklistItem,
   getAllTags,
-  getNotesByTag
+  getNotesByTag,
+  getSmartViewCounts,
+  getNotesBySmartView
 } = require("../controllers/note.controller");
 
 router.post("/add-note", authenticateToken, addNote);
@@ -22,5 +24,7 @@ router.get("/search-note", authenticateToken, searchNote);
 router.put("/toggle-checklist/:noteId/:itemId", authenticateToken, toggleChecklistItem);
 router.get("/tags", authenticateToken, getAllTags);
 router.get("/notes-by-tag/:tag", authenticateToken, getNotesByTag);
+router.get("/smart-views/counts", authenticateToken, getSmartViewCounts);
+router.get("/smart-views/:view", authenticateToken, getNotesBySmartView);
 
 module.exports = router;

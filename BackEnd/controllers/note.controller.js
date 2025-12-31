@@ -329,6 +329,143 @@ const getNotesByTag = async (req, res) => {
   }
 };
 
+// !GET SMART VIEW COUNTS
+const getSmartViewCounts = async (req, res) => {
+  const { user } = req.user;
+
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Run all counts in parallel for efficiency
+    const [
+      allCount,
+      pinnedCount,
+      recentCount,
+      withTasksCount,
+      untaggedCount,
+      highPriorityCount,
+      dueSoonCount,
+      archivedCount
+    ] = await Promise.all([
+      // All active notes
+      Note.countDocuments({ userId: user._id, isArchived: false }),
+      // Pinned notes
+      Note.countDocuments({ userId: user._id, isArchived: false, isPinned: true }),
+      // Recent (updated in last 7 days)
+      Note.countDocuments({ userId: user._id, isArchived: false, updatedAt: { $gte: sevenDaysAgo } }),
+      // Notes with incomplete tasks
+      Note.countDocuments({
+        userId: user._id,
+        isArchived: false,
+        "checklist.0": { $exists: true },
+        "checklist.isCompleted": false
+      }),
+      // Untagged notes
+      Note.countDocuments({ userId: user._id, isArchived: false, tags: { $size: 0 } }),
+      // High priority notes
+      Note.countDocuments({ userId: user._id, isArchived: false, priority: "high" }),
+      // Due soon (within 7 days)
+      Note.countDocuments({
+        userId: user._id,
+        isArchived: false,
+        dueDate: { $ne: null, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) }
+      }),
+      // Archived notes
+      Note.countDocuments({ userId: user._id, isArchived: true })
+    ]);
+
+    return res.status(200).json({
+      error: false,
+      counts: {
+        all: allCount,
+        pinned: pinnedCount,
+        recent: recentCount,
+        withTasks: withTasksCount,
+        untagged: untaggedCount,
+        highPriority: highPriorityCount,
+        dueSoon: dueSoonCount,
+        archived: archivedCount
+      },
+      message: "Smart view counts retrieved successfully!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+// !GET NOTES BY SMART VIEW
+const getNotesBySmartView = async (req, res) => {
+  const { user } = req.user;
+  const { view } = req.params;
+
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    let query = { userId: user._id };
+    let sort = { isPinned: -1, updatedAt: -1 };
+
+    switch (view) {
+      case "all":
+        query.isArchived = false;
+        break;
+      case "pinned":
+        query.isArchived = false;
+        query.isPinned = true;
+        break;
+      case "recent":
+        query.isArchived = false;
+        query.updatedAt = { $gte: sevenDaysAgo };
+        sort = { updatedAt: -1 };
+        break;
+      case "withTasks":
+        query.isArchived = false;
+        query["checklist.0"] = { $exists: true };
+        query["checklist.isCompleted"] = false;
+        break;
+      case "untagged":
+        query.isArchived = false;
+        query.tags = { $size: 0 };
+        break;
+      case "highPriority":
+        query.isArchived = false;
+        query.priority = "high";
+        break;
+      case "dueSoon":
+        query.isArchived = false;
+        query.dueDate = { $ne: null, $lte: sevenDaysFromNow };
+        sort = { dueDate: 1, isPinned: -1 };
+        break;
+      case "archived":
+        query.isArchived = true;
+        break;
+      default:
+        return res.status(400).json({
+          error: true,
+          message: "Invalid smart view!",
+        });
+    }
+
+    const notes = await Note.find(query).sort(sort);
+
+    return res.status(200).json({
+      error: false,
+      notes,
+      message: `Notes for "${view}" view retrieved successfully!`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   addNote,
   editNote,
@@ -339,4 +476,6 @@ module.exports = {
   toggleChecklistItem,
   getAllTags,
   getNotesByTag,
+  getSmartViewCounts,
+  getNotesBySmartView,
 };

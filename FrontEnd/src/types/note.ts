@@ -136,3 +136,47 @@ export const PRIORITY_CONFIG: Record<NotePriority, { label: string; color: strin
   medium: { label: "Medium", color: "text-amber-500", bgColor: "bg-amber-500" },
   high: { label: "High", color: "text-red-500", bgColor: "bg-red-500" },
 };
+
+// Smart Views Configuration
+export type SmartViewType =
+  | "all"
+  | "pinned"
+  | "recent"
+  | "withTasks"
+  | "untagged"
+  | "highPriority"
+  | "dueSoon"
+  | "archived";
+
+export interface SmartViewCounts {
+  all: number;
+  pinned: number;
+  recent: number;
+  withTasks: number;
+  untagged: number;
+  highPriority: number;
+  dueSoon: number;
+  archived: number;
+}
+
+export interface SmartViewConfig {
+  id: SmartViewType;
+  label: string;
+  icon: string;
+  description: string;
+  section: "main" | "organize" | "status";
+}
+
+export const SMART_VIEWS: SmartViewConfig[] = [
+  // Main views
+  { id: "all", label: "All Notes", icon: "Inbox", description: "All your active notes", section: "main" },
+  { id: "recent", label: "Recent", icon: "Clock", description: "Updated in the last 7 days", section: "main" },
+  { id: "pinned", label: "Pinned", icon: "Pin", description: "Your pinned notes", section: "main" },
+  // Organize views
+  { id: "withTasks", label: "With Tasks", icon: "CheckSquare", description: "Notes with incomplete tasks", section: "organize" },
+  { id: "untagged", label: "Untagged", icon: "TagOff", description: "Notes without tags", section: "organize" },
+  // Status views
+  { id: "highPriority", label: "High Priority", icon: "AlertCircle", description: "High priority notes", section: "status" },
+  { id: "dueSoon", label: "Due Soon", icon: "Calendar", description: "Due within 7 days", section: "status" },
+  { id: "archived", label: "Archived", icon: "Archive", description: "Your archived notes", section: "status" },
+];
