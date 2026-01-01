@@ -3,14 +3,16 @@ import {
   AlertTriangle,
   Clock,
   Flag,
-  ChevronRight,
+  ChevronDown,
   X,
   Sparkles,
   ArrowRight,
   Zap,
+  MoreHorizontal,
 } from "lucide-react"
 import { Note, DailyFocusData, FocusItem, NOTE_COLORS } from "@/types/note"
 import { cn } from "@/lib/utils"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface DailyFocusProps {
   focusData: DailyFocusData | null
@@ -19,8 +21,8 @@ interface DailyFocusProps {
   isLoading?: boolean
 }
 
-// Compact note card for focus items
-function FocusNoteCard({
+// Minimal, inline focus item - designed for scannability
+function FocusChip({
   item,
   onClick,
   variant = "default",
@@ -32,10 +34,62 @@ function FocusNoteCard({
   const colors = NOTE_COLORS[item.note.color] || NOTE_COLORS.default
 
   const variantStyles = {
-    critical: "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/30",
-    attention: "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30",
-    progress: "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30",
-    default: "border-border bg-card hover:bg-muted/50",
+    critical: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/50",
+    attention: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50",
+    progress: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50",
+    default: "bg-muted/50 border-border hover:bg-muted",
+  }
+
+  const labelStyles = {
+    critical: "text-red-600 dark:text-red-400",
+    attention: "text-amber-600 dark:text-amber-400",
+    progress: "text-emerald-600 dark:text-emerald-400",
+    default: "text-muted-foreground",
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200",
+        "hover:shadow-sm active:scale-[0.98]",
+        variantStyles[variant]
+      )}
+    >
+      {/* Color dot */}
+      <div className={cn("w-2 h-2 rounded-full shrink-0", colors.accent)} />
+
+      {/* Title */}
+      <span className="text-sm font-medium text-foreground truncate max-w-[180px]">
+        {item.note.title}
+      </span>
+
+      {/* Label badge */}
+      <span className={cn(
+        "text-[10px] font-semibold uppercase tracking-wide shrink-0",
+        labelStyles[variant]
+      )}>
+        {item.label}
+      </span>
+    </button>
+  )
+}
+
+// Compact card for expanded view
+function FocusCard({
+  item,
+  onClick,
+  variant = "default",
+}: {
+  item: FocusItem
+  onClick: () => void
+  variant?: "critical" | "attention" | "progress" | "default"
+}) {
+  const variantBorder = {
+    critical: "border-l-red-500",
+    attention: "border-l-amber-500",
+    progress: "border-l-emerald-500",
+    default: "border-l-slate-400",
   }
 
   const labelStyles = {
@@ -49,19 +103,16 @@ function FocusNoteCard({
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left p-3 rounded-xl border transition-all duration-200",
-        "hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
-        variantStyles[variant]
+        "w-full text-left p-3 rounded-lg border border-l-4 bg-card transition-all duration-200",
+        "hover:shadow-md hover:bg-muted/30 active:scale-[0.99]",
+        variantBorder[variant]
       )}
     >
-      <div className="flex items-start gap-3">
-        {/* Color indicator */}
-        <div className={cn("w-1 h-full min-h-[40px] rounded-full shrink-0", colors.accent)} />
-
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className={cn(
-              "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+              "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
               labelStyles[variant]
             )}>
               {item.label}
@@ -77,69 +128,64 @@ function FocusNoteCard({
           </h4>
           {item.note.content && (
             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-              {item.note.content.substring(0, 60)}
-              {item.note.content.length > 60 ? "..." : ""}
+              {item.note.content.substring(0, 80)}
             </p>
           )}
-
-          {/* Progress bar for items with progress */}
-          {item.progress !== undefined && (
-            <div className="mt-2 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  item.progress === 100 ? "bg-emerald-500" : "bg-amber-500"
-                )}
-                style={{ width: `${item.progress}%` }}
-              />
-            </div>
-          )}
         </div>
-
-        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
+
+      {/* Progress bar for items with progress */}
+      {item.progress !== undefined && (
+        <div className="mt-2 h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              item.progress === 100 ? "bg-emerald-500" : "bg-emerald-400"
+            )}
+            style={{ width: `${item.progress}%` }}
+          />
+        </div>
+      )}
     </button>
   )
 }
 
-// Section header with optional action
-function FocusSectionHeader({
+// Summary pill for collapsed state
+function SummaryPill({
   icon,
-  title,
   count,
-  color = "default",
+  label,
+  color
 }: {
   icon: React.ReactNode
-  title: string
-  count?: number
-  color?: "red" | "amber" | "emerald" | "default"
+  count: number
+  label: string
+  color: "red" | "amber" | "emerald" | "slate"
 }) {
+  if (count === 0) return null
+
   const colorStyles = {
-    red: "text-red-600 dark:text-red-400",
-    amber: "text-amber-600 dark:text-amber-400",
-    emerald: "text-emerald-600 dark:text-emerald-400",
-    default: "text-foreground",
+    red: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+    amber: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+    emerald: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+    slate: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
   }
 
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className={cn("", colorStyles[color])}>
-        {icon}
-      </span>
-      <h3 className={cn("text-sm font-semibold", colorStyles[color])}>
-        {title}
-      </h3>
-      {count !== undefined && count > 0 && (
-        <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-          {count}
-        </span>
-      )}
+    <div className={cn(
+      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+      colorStyles[color]
+    )}>
+      {icon}
+      <span>{count}</span>
+      <span className="hidden sm:inline">{label}</span>
     </div>
   )
 }
 
 function DailyFocus({ focusData, onViewNote, onDismiss, isLoading }: DailyFocusProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Don't render if no focus data or all sections are empty
   const hasContent = focusData && (
@@ -150,12 +196,12 @@ function DailyFocus({ focusData, onViewNote, onDismiss, isLoading }: DailyFocusP
 
   if (isLoading) {
     return (
-      <div className="mb-8 rounded-2xl border border-border bg-gradient-to-br from-background to-muted/30 p-6">
+      <div className="mb-6 p-4 rounded-xl border border-border bg-card/50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-muted animate-pulse" />
-          <div className="space-y-2 flex-1">
-            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
-            <div className="h-3 w-48 bg-muted rounded animate-pulse" />
+          <div className="w-8 h-8 rounded-lg bg-muted animate-pulse" />
+          <div className="space-y-1.5 flex-1">
+            <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-2 w-40 bg-muted rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -168,153 +214,228 @@ function DailyFocus({ focusData, onViewNote, onDismiss, isLoading }: DailyFocusP
 
   const { needsAttention, continueWorking, recentlyEdited, summary } = focusData!
 
-  // Determine the urgency level for the header
+  // Determine urgency level
   const hasUrgent = summary.overdueCount > 0 || summary.dueTodayCount > 0
   const hasAttention = needsAttention.length > 0
 
+  // Items to show in collapsed "quick glance" view
+  // Show max 3 most important items inline
+  const quickGlanceItems = [
+    ...needsAttention.slice(0, 2),
+    ...continueWorking.slice(0, 1),
+  ].slice(0, 3)
+
+  const totalItems = needsAttention.length + continueWorking.length + recentlyEdited.length
+  const hiddenCount = totalItems - quickGlanceItems.length
+
   return (
     <div className={cn(
-      "mb-8 rounded-2xl border overflow-hidden transition-all duration-300",
+      "mb-6 rounded-xl border overflow-hidden transition-all duration-300",
       hasUrgent
-        ? "border-red-200 dark:border-red-800/50 bg-gradient-to-br from-red-50/50 to-background dark:from-red-950/20 dark:to-background"
+        ? "border-red-200 dark:border-red-900/50 bg-gradient-to-r from-red-50/50 via-background to-background dark:from-red-950/20"
         : hasAttention
-        ? "border-amber-200 dark:border-amber-800/50 bg-gradient-to-br from-amber-50/50 to-background dark:from-amber-950/20 dark:to-background"
-        : "border-border bg-gradient-to-br from-background to-muted/30"
+        ? "border-amber-200 dark:border-amber-900/50 bg-gradient-to-r from-amber-50/50 via-background to-background dark:from-amber-950/20"
+        : "border-border bg-card/50"
     )}>
-      {/* Header */}
-      <div className="p-4 pb-0">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center",
-              hasUrgent
-                ? "bg-red-100 dark:bg-red-900/50"
-                : hasAttention
-                ? "bg-amber-100 dark:bg-amber-900/50"
-                : "bg-primary/10"
-            )}>
-              {hasUrgent ? (
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-              ) : hasAttention ? (
-                <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              ) : (
-                <Sparkles className="h-5 w-5 text-primary" />
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        {/* Header - Always visible, acts as summary */}
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Icon + Title */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                hasUrgent
+                  ? "bg-red-100 dark:bg-red-900/50"
+                  : hasAttention
+                  ? "bg-amber-100 dark:bg-amber-900/50"
+                  : "bg-primary/10"
+              )}>
+                {hasUrgent ? (
+                  <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                ) : hasAttention ? (
+                  <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-primary" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Daily Focus
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {hasUrgent
+                    ? `${summary.overdueCount + summary.dueTodayCount} item${summary.overdueCount + summary.dueTodayCount > 1 ? "s" : ""} need attention`
+                    : `${totalItems} item${totalItems > 1 ? "s" : ""} to review`}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Summary pills + Actions */}
+            <div className="flex items-center gap-2">
+              {/* Summary pills - only on larger screens when collapsed */}
+              {!isExpanded && (
+                <div className="hidden md:flex items-center gap-1.5">
+                  <SummaryPill
+                    icon={<AlertTriangle className="h-3 w-3" />}
+                    count={summary.overdueCount}
+                    label="overdue"
+                    color="red"
+                  />
+                  <SummaryPill
+                    icon={<Flag className="h-3 w-3" />}
+                    count={summary.dueTodayCount + summary.highPriorityCount}
+                    label="urgent"
+                    color="amber"
+                  />
+                  <SummaryPill
+                    icon={<ArrowRight className="h-3 w-3" />}
+                    count={summary.inProgressCount}
+                    label="in progress"
+                    color="emerald"
+                  />
+                </div>
+              )}
+
+              {/* Expand/Collapse */}
+              <CollapsibleTrigger asChild>
+                <button
+                  className={cn(
+                    "p-2 rounded-lg transition-colors",
+                    "hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground"
+                  )}
+                >
+                  <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isExpanded && "rotate-180"
+                  )} />
+                </button>
+              </CollapsibleTrigger>
+
+              {/* Dismiss */}
+              <button
+                onClick={onDismiss}
+                className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+                title="Dismiss for today"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Glance - Inline chips when collapsed */}
+          {!isExpanded && quickGlanceItems.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border/50">
+              {quickGlanceItems.map((item) => (
+                <FocusChip
+                  key={item.note._id}
+                  item={item}
+                  onClick={() => onViewNote(item.note)}
+                  variant={
+                    item.urgency === "critical"
+                      ? "critical"
+                      : item.urgency === "high"
+                      ? "attention"
+                      : item.progress !== undefined
+                      ? "progress"
+                      : "default"
+                  }
+                />
+              ))}
+              {hiddenCount > 0 && (
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-1 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                    <span>+{hiddenCount} more</span>
+                  </button>
+                </CollapsibleTrigger>
               )}
             </div>
-            <div>
-              <h2 className="font-semibold text-foreground">
-                {hasUrgent
-                  ? "Needs your attention"
-                  : hasAttention
-                  ? "Today's Focus"
-                  : "Pick up where you left off"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {hasUrgent
-                  ? `${summary.overdueCount + summary.dueTodayCount} urgent item${summary.overdueCount + summary.dueTodayCount > 1 ? "s" : ""}`
-                  : hasAttention
-                  ? `${needsAttention.length} item${needsAttention.length > 1 ? "s" : ""} to focus on`
-                  : `${continueWorking.length + recentlyEdited.length} recent note${continueWorking.length + recentlyEdited.length > 1 ? "s" : ""}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
-            >
-              <ChevronRight className={cn(
-                "h-4 w-4 transition-transform duration-200",
-                isExpanded && "rotate-90"
-              )} />
-            </button>
-            <button
-              onClick={onDismiss}
-              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
-              title="Dismiss for today"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      {isExpanded && (
-        <div className="p-4 pt-4 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* Needs Attention Section */}
-          {needsAttention.length > 0 && (
-            <div>
-              <FocusSectionHeader
-                icon={<Flag className="h-4 w-4" />}
-                title="Needs Attention"
-                count={needsAttention.length}
-                color={hasUrgent ? "red" : "amber"}
-              />
-              <div className="space-y-2">
-                {needsAttention.map((item) => (
-                  <FocusNoteCard
-                    key={item.note._id}
-                    item={item}
-                    onClick={() => onViewNote(item.note)}
-                    variant={
-                      item.urgency === "critical"
-                        ? "critical"
-                        : item.urgency === "high"
-                        ? "attention"
-                        : "default"
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Continue Working Section */}
-          {continueWorking.length > 0 && (
-            <div>
-              <FocusSectionHeader
-                icon={<ArrowRight className="h-4 w-4" />}
-                title="Continue Working"
-                count={continueWorking.length}
-                color="emerald"
-              />
-              <div className="space-y-2">
-                {continueWorking.map((item) => (
-                  <FocusNoteCard
-                    key={item.note._id}
-                    item={item}
-                    onClick={() => onViewNote(item.note)}
-                    variant="progress"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recently Edited Section */}
-          {recentlyEdited.length > 0 && (
-            <div>
-              <FocusSectionHeader
-                icon={<Clock className="h-4 w-4" />}
-                title="Recently Edited"
-                count={recentlyEdited.length}
-              />
-              <div className="space-y-2">
-                {recentlyEdited.map((item) => (
-                  <FocusNoteCard
-                    key={item.note._id}
-                    item={item}
-                    onClick={() => onViewNote(item.note)}
-                    variant="default"
-                  />
-                ))}
-              </div>
-            </div>
           )}
         </div>
-      )}
+
+        {/* Expanded Content */}
+        <CollapsibleContent>
+          <div className="px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Divider */}
+            <div className="border-t border-border/50" />
+
+            {/* Needs Attention - Max 5 items */}
+            {needsAttention.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                  <Flag className="h-3 w-3" />
+                  Needs Attention
+                  <span className="text-[10px] font-normal">({needsAttention.length})</span>
+                </h3>
+                <div className="grid gap-2">
+                  {needsAttention.slice(0, 5).map((item) => (
+                    <FocusCard
+                      key={item.note._id}
+                      item={item}
+                      onClick={() => onViewNote(item.note)}
+                      variant={
+                        item.urgency === "critical"
+                          ? "critical"
+                          : item.urgency === "high"
+                          ? "attention"
+                          : "default"
+                      }
+                    />
+                  ))}
+                  {needsAttention.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center py-1">
+                      +{needsAttention.length - 5} more items in High Priority view
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Continue Working - Max 4 items */}
+            {continueWorking.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                  <ArrowRight className="h-3 w-3" />
+                  Continue Working
+                  <span className="text-[10px] font-normal">({continueWorking.length})</span>
+                </h3>
+                <div className="grid gap-2">
+                  {continueWorking.slice(0, 4).map((item) => (
+                    <FocusCard
+                      key={item.note._id}
+                      item={item}
+                      onClick={() => onViewNote(item.note)}
+                      variant="progress"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recently Edited - Max 3 items */}
+            {recentlyEdited.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                  <Clock className="h-3 w-3" />
+                  Recently Edited
+                  <span className="text-[10px] font-normal">({recentlyEdited.length})</span>
+                </h3>
+                <div className="grid gap-2">
+                  {recentlyEdited.slice(0, 3).map((item) => (
+                    <FocusCard
+                      key={item.note._id}
+                      item={item}
+                      onClick={() => onViewNote(item.note)}
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }
