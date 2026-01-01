@@ -86,6 +86,28 @@ const NoteSchema = new mongoose.Schema({
     // dueDate is when something is actually due. A note might remind 1 day before due.
   },
 
+  // Smart Priority Controls
+  snoozedUntil: {
+    type: Date,
+    default: null,
+    // Justification: Allows users to temporarily hide notes from smart priority
+    // without archiving. Note reappears automatically after snooze expires.
+  },
+
+  dismissedFromFocus: {
+    type: Boolean,
+    default: false,
+    // Justification: User explicitly dismissed this note from smart suggestions.
+    // Resets when note is edited or after a period of time.
+  },
+
+  focusPinned: {
+    type: Boolean,
+    default: false,
+    // Justification: User explicitly wants this note to always appear in focus.
+    // Separate from regular pinning - this is for the smart priority section.
+  },
+
   // Checklist Support
   checklist: {
     type: [{

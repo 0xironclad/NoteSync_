@@ -20,9 +20,10 @@ import {
   PanelLeft,
   ChevronRight,
 } from "lucide-react"
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS, DailyFocusData, ResumeSuggestionsData } from "@/types/note"
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS, DailyFocusData, ResumeSuggestionsData, SmartPriorityData, SnoozeDuration } from "@/types/note"
 import DailyFocus from "./DailyFocus/DailyFocus"
 import ResumePrompt from "./ResumePrompt/ResumePrompt"
+import SmartPriority from "./SmartPriority/SmartPriority"
 import { cn } from "@/lib/utils"
 
 interface NoteFormData {
@@ -68,6 +69,13 @@ interface DashboardProps {
   onDismissResume: () => void
   onTrackNoteView: (noteId: string) => void
   onTrackNoteEdit: (noteId: string) => void
+  smartPriority: SmartPriorityData | null
+  priorityLoading: boolean
+  priorityDismissed: boolean
+  onDismissPriority: () => void
+  onSnoozeNote: (noteId: string, duration: SnoozeDuration) => void
+  onDismissNoteFromFocus: (noteId: string) => void
+  onToggleFocusPin: (noteId: string) => void
 }
 
 // Icon mapping for smart views
@@ -111,6 +119,13 @@ function Dashboard({
   onDismissResume,
   onTrackNoteView,
   onTrackNoteEdit,
+  smartPriority,
+  priorityLoading,
+  priorityDismissed,
+  onDismissPriority,
+  onSnoozeNote,
+  onDismissNoteFromFocus,
+  onToggleFocusPin,
 }: DashboardProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
@@ -575,6 +590,19 @@ function Dashboard({
               onViewNote={handleOpenView}
               onDismiss={onDismissResume}
               isLoading={resumeLoading}
+            />
+          )}
+
+          {/* Smart Priority - Transparent prioritization with explanations */}
+          {activeView === "all" && !searchQuery && !selectedTag && !priorityDismissed && (
+            <SmartPriority
+              data={smartPriority}
+              onViewNote={handleOpenView}
+              onDismiss={onDismissPriority}
+              onSnoozeNote={onSnoozeNote}
+              onDismissNote={onDismissNoteFromFocus}
+              onToggleFocusPin={onToggleFocusPin}
+              isLoading={priorityLoading}
             />
           )}
 

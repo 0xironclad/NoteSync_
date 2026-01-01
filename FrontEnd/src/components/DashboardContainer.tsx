@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AxiosInstance from "../utils/AxiosInstance";
 import Dashboard from "./Dashboard";
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, DailyFocusData, ResumeSuggestionsData } from "@/types/note";
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, DailyFocusData, ResumeSuggestionsData, SmartPriorityData, SnoozeDuration } from "@/types/note";
 import { toast } from "sonner";
 
 interface NoteFormData {
@@ -43,6 +43,9 @@ function DashboardContainer() {
     const [resumeData, setResumeData] = useState<ResumeSuggestionsData | null>(null);
     const [resumeLoading, setResumeLoading] = useState(true);
     const [resumeDismissed, setResumeDismissed] = useState(false);
+    const [smartPriority, setSmartPriority] = useState<SmartPriorityData | null>(null);
+    const [priorityLoading, setPriorityLoading] = useState(true);
+    const [priorityDismissed, setPriorityDismissed] = useState(false);
 
     const fetchTags = useCallback(async () => {
         try {
@@ -95,6 +98,21 @@ function DashboardContainer() {
             setResumeLoading(false);
         }
     }, [resumeDismissed]);
+
+    const fetchSmartPriority = useCallback(async () => {
+        if (priorityDismissed) return;
+        setPriorityLoading(true);
+        try {
+            const response = await AxiosInstance.get("/smart-priority");
+            if (!response.data.error) {
+                setSmartPriority(response.data.priority);
+            }
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setPriorityLoading(false);
+        }
+    }, [priorityDismissed]);
 
     // Track note view when opening a note
     const trackNoteView = useCallback(async (noteId: string) => {
@@ -178,7 +196,8 @@ function DashboardContainer() {
         fetchViewCounts();
         fetchDailyFocus();
         fetchResumeSuggestions();
-    }, [fetchData, fetchTags, fetchViewCounts, fetchDailyFocus, fetchResumeSuggestions]);
+        fetchSmartPriority();
+    }, [fetchData, fetchTags, fetchViewCounts, fetchDailyFocus, fetchResumeSuggestions, fetchSmartPriority]);
 
     const onDismissFocus = useCallback(() => {
         setFocusDismissed(true);
@@ -189,6 +208,54 @@ function DashboardContainer() {
         setResumeDismissed(true);
         setResumeData(null);
     }, []);
+
+    const onDismissPriority = useCallback(() => {
+        setPriorityDismissed(true);
+        setSmartPriority(null);
+    }, []);
+
+    // Smart Priority Controls
+    const onSnoozeNote = useCallback(async (noteId: string, duration: SnoozeDuration) => {
+        try {
+            const response = await AxiosInstance.put(`/snooze/${noteId}`, { duration });
+            if (!response.data.error) {
+                toast.success(`Note snoozed`);
+                fetchSmartPriority();
+            } else {
+                toast.error(response.data.message || "Failed to snooze note");
+            }
+        } catch (error) {
+            toast.error("Failed to snooze note");
+        }
+    }, [fetchSmartPriority]);
+
+    const onDismissNoteFromFocus = useCallback(async (noteId: string) => {
+        try {
+            const response = await AxiosInstance.put(`/dismiss-focus/${noteId}`);
+            if (!response.data.error) {
+                toast.success("Note dismissed from suggestions");
+                fetchSmartPriority();
+            } else {
+                toast.error(response.data.message || "Failed to dismiss note");
+            }
+        } catch (error) {
+            toast.error("Failed to dismiss note");
+        }
+    }, [fetchSmartPriority]);
+
+    const onToggleFocusPin = useCallback(async (noteId: string) => {
+        try {
+            const response = await AxiosInstance.put(`/toggle-focus-pin/${noteId}`);
+            if (!response.data.error) {
+                toast.success(response.data.message);
+                fetchSmartPriority();
+            } else {
+                toast.error(response.data.message || "Failed to update focus pin");
+            }
+        } catch (error) {
+            toast.error("Failed to update focus pin");
+        }
+    }, [fetchSmartPriority]);
 
     const onCreateNote = async (data: NoteFormData) => {
         const response = await AxiosInstance.post("/add-note", data);
@@ -271,6 +338,10 @@ function DashboardContainer() {
         fetchResumeSuggestions();
     }, [fetchResumeSuggestions]);
 
+    useEffect(() => {
+        fetchSmartPriority();
+    }, [fetchSmartPriority]);
+
     return (
         <Dashboard
             notes={notes}
@@ -298,6 +369,13 @@ function DashboardContainer() {
             onDismissResume={onDismissResume}
             onTrackNoteView={trackNoteView}
             onTrackNoteEdit={trackNoteEdit}
+            smartPriority={smartPriority}
+            priorityLoading={priorityLoading}
+            priorityDismissed={priorityDismissed}
+            onDismissPriority={onDismissPriority}
+            onSnoozeNote={onSnoozeNote}
+            onDismissNoteFromFocus={onDismissNoteFromFocus}
+            onToggleFocusPin={onToggleFocusPin}
         />
     );
 }

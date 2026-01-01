@@ -764,6 +764,385 @@ const getNotesBySmartView = async (req, res) => {
   }
 };
 
+
+
+const getSmartPriority = async (req, res) => {
+  const { user } = req.user;
+
+  try {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Fetch all active notes
+    const allNotes = await Note.find({
+      userId: user._id,
+      isArchived: false
+    });
+
+    const now_ts = now.getTime();
+
+    // Analyze each note and assign signals
+    const analyzed = allNotes.map(note => {
+      // Skip snoozed notes (unless snooze expired)
+      if (note.snoozedUntil && new Date(note.snoozedUntil).getTime() > now_ts) {
+        return null;
+      }
+
+      // Skip dismissed notes (unless they're focus-pinned)
+      if (note.dismissedFromFocus && !note.focusPinned) {
+        return null;
+      }
+
+      const signals = [];
+      let primarySignal = null;
+      let explanation = "";
+
+      // Focus-pinned notes get a special signal
+      const isFocusPinned = note.focusPinned === true;
+
+      const hasIncompleteTasks = note.checklist.length > 0 &&
+        note.checklist.some(item => !item.isCompleted);
+      const completedCount = note.checklist.filter(i => i.isCompleted).length;
+      const totalCount = note.checklist.length;
+
+      // --- URGENCY SIGNALS (checked first, highest priority) ---
+      if (note.dueDate) {
+        const dueDate = new Date(note.dueDate);
+
+        if (dueDate < startOfToday) {
+          signals.push("overdue");
+          const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
+          primarySignal = "overdue";
+          explanation = `${daysOverdue} day${daysOverdue > 1 ? 's' : ''} overdue`;
+        } else if (dueDate >= startOfToday && dueDate < endOfToday) {
+          signals.push("due_today");
+          if (!primarySignal) {
+            primarySignal = "due_today";
+            explanation = "Due today";
+          }
+        } else if (dueDate <= threeDaysFromNow) {
+          signals.push("due_soon");
+          if (!primarySignal) {
+            primarySignal = "due_soon";
+            const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+            explanation = `Due in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`;
+          }
+        }
+      }
+
+      // --- USER INTENT SIGNALS ---
+      if (note.priority === "high") {
+        signals.push("high_priority");
+        if (!primarySignal) {
+          primarySignal = "high_priority";
+          explanation = "High priority";
+        }
+      }
+
+      if (note.isPinned) {
+        signals.push("pinned");
+        if (!primarySignal) {
+          primarySignal = "pinned";
+          explanation = "Pinned for quick access";
+        }
+      }
+
+      // --- RECENCY SIGNALS ---
+      if (hasIncompleteTasks) {
+        signals.push("in_progress");
+        if (!primarySignal) {
+          primarySignal = "in_progress";
+          explanation = `${completedCount}/${totalCount} tasks done`;
+        }
+      }
+
+      const updatedAt = new Date(note.updatedAt);
+      if (updatedAt >= twentyFourHoursAgo) {
+        signals.push("recently_active");
+        if (!primarySignal) {
+          primarySignal = "recently_active";
+          explanation = `Edited ${formatTimeAgo(updatedAt, now)}`;
+        }
+      }
+
+      // Default fallback
+      if (!primarySignal && signals.length === 0 && !isFocusPinned) {
+        return null; // Skip notes with no signals (unless focus-pinned)
+      }
+
+      return {
+        note,
+        signals,
+        primarySignal: primarySignal || (isFocusPinned ? "pinned" : signals[0]),
+        explanation: explanation || (isFocusPinned ? "Pinned to focus" : "Active note"),
+        isFocusPinned,
+      };
+    }).filter(Boolean);
+
+    // --- CATEGORIZE BY PRIMARY PURPOSE ---
+
+    // URGENT: Overdue, due today, due soon, or high priority
+    const urgent = analyzed
+      .filter(item =>
+        ["overdue", "due_today", "due_soon", "high_priority"].includes(item.primarySignal)
+      )
+      .sort((a, b) => {
+        // Sort by urgency level
+        const urgencyOrder = { overdue: 0, due_today: 1, due_soon: 2, high_priority: 3 };
+        return urgencyOrder[a.primarySignal] - urgencyOrder[b.primarySignal];
+      })
+      .slice(0, 3)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+    // ACTIVE: In progress or recently active (not already in urgent)
+    const urgentIds = new Set(urgent.map(u => u.note._id.toString()));
+    const active = analyzed
+      .filter(item =>
+        !urgentIds.has(item.note._id.toString()) &&
+        ["in_progress", "recently_active"].includes(item.primarySignal)
+      )
+      .sort((a, b) => {
+        // Prioritize in_progress over recently_active
+        if (a.primarySignal === "in_progress" && b.primarySignal !== "in_progress") return -1;
+        if (b.primarySignal === "in_progress" && a.primarySignal !== "in_progress") return 1;
+        // Then by recency
+        return new Date(b.note.updatedAt) - new Date(a.note.updatedAt);
+      })
+      .slice(0, 4)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+    // SUGGESTED: Pinned notes not in other categories
+    const activeIds = new Set(active.map(a => a.note._id.toString()));
+    const suggested = analyzed
+      .filter(item =>
+        !urgentIds.has(item.note._id.toString()) &&
+        !activeIds.has(item.note._id.toString()) &&
+        item.signals.includes("pinned")
+      )
+      .slice(0, 3)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+    // FOCUS PINNED: Notes user explicitly wants in focus (always shown)
+    const focusPinned = analyzed
+      .filter(item =>
+        item.isFocusPinned &&
+        !urgentIds.has(item.note._id.toString()) &&
+        !activeIds.has(item.note._id.toString())
+      )
+      .slice(0, 3)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+    // Count snoozed notes for insights
+    const snoozedCount = allNotes.filter(
+      n => n.snoozedUntil && new Date(n.snoozedUntil).getTime() > now_ts
+    ).length;
+
+    // --- GENERATE INSIGHTS ---
+    const insights = [];
+
+    const overdueCount = analyzed.filter(i => i.signals.includes("overdue")).length;
+    if (overdueCount > 0) {
+      insights.push({
+        type: "info",
+        message: `${overdueCount} note${overdueCount > 1 ? 's' : ''} past due date`
+      });
+    }
+
+    const inProgressCount = analyzed.filter(i => i.signals.includes("in_progress")).length;
+    if (inProgressCount > 3) {
+      insights.push({
+        type: "tip",
+        message: "Focus on finishing current tasks before starting new ones"
+      });
+    }
+
+    if (urgent.length === 0 && active.length === 0) {
+      insights.push({
+        type: "success",
+        message: "All caught up! No urgent items right now"
+      });
+    }
+
+    if (snoozedCount > 0) {
+      insights.push({
+        type: "info",
+        message: `${snoozedCount} snoozed note${snoozedCount > 1 ? 's' : ''} hidden`
+      });
+    }
+
+    return res.status(200).json({
+      error: false,
+      priority: {
+        urgent,
+        active,
+        suggested,
+        focusPinned,
+        insights,
+        snoozedCount,
+      },
+      // Include explanation of the ranking system
+      howItWorks: {
+        urgency: "Time-sensitive items (overdue, due today/soon) always appear first",
+        recency: "Notes you've edited recently or have active tasks stay visible",
+        intent: "Your pinned and high-priority items are given prominence",
+        adaptation: "The ranking updates as you complete tasks and interact with notes"
+      },
+      message: "Smart priority retrieved successfully!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+// =============================================================================
+// SMART PRIORITY CONTROLS - Lightweight User Actions
+// =============================================================================
+// These endpoints provide subtle control over smart suggestions without
+// disrupting workflow. Users can snooze, dismiss, or focus-pin notes.
+
+// Snooze a note from smart priority for a duration
+const snoozeNote = async (req, res) => {
+  const { noteId } = req.params;
+  const { duration } = req.body; // "1h", "4h", "1d", "3d", "1w"
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({ error: true, message: "Note not found!" });
+    }
+
+    // Calculate snooze end time
+    const now = new Date();
+    const durations = {
+      "1h": 60 * 60 * 1000,
+      "4h": 4 * 60 * 60 * 1000,
+      "1d": 24 * 60 * 60 * 1000,
+      "3d": 3 * 24 * 60 * 60 * 1000,
+      "1w": 7 * 24 * 60 * 60 * 1000,
+    };
+
+    const ms = durations[duration] || durations["1d"];
+    note.snoozedUntil = new Date(now.getTime() + ms);
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: `Note snoozed until ${note.snoozedUntil.toLocaleString()}`,
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: true, message: error.message });
+  }
+};
+
+// Unsnooze a note (bring it back immediately)
+const unsnoozeNote = async (req, res) => {
+  const { noteId } = req.params;
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({ error: true, message: "Note not found!" });
+    }
+
+    note.snoozedUntil = null;
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: "Note unsnoozed",
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: true, message: error.message });
+  }
+};
+
+// Dismiss a note from smart suggestions
+const dismissFromFocus = async (req, res) => {
+  const { noteId } = req.params;
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({ error: true, message: "Note not found!" });
+    }
+
+    note.dismissedFromFocus = true;
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: "Note dismissed from focus",
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: true, message: error.message });
+  }
+};
+
+// Restore a dismissed note to focus
+const restoreToFocus = async (req, res) => {
+  const { noteId } = req.params;
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({ error: true, message: "Note not found!" });
+    }
+
+    note.dismissedFromFocus = false;
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: "Note restored to focus",
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: true, message: error.message });
+  }
+};
+
+// Toggle focus-pin status (always show in smart priority)
+const toggleFocusPin = async (req, res) => {
+  const { noteId } = req.params;
+  const { user } = req.user;
+
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!note) {
+      return res.status(404).json({ error: true, message: "Note not found!" });
+    }
+
+    note.focusPinned = !note.focusPinned;
+    // If focus-pinning, also clear any dismiss/snooze
+    if (note.focusPinned) {
+      note.dismissedFromFocus = false;
+      note.snoozedUntil = null;
+    }
+    await note.save();
+
+    return res.status(200).json({
+      error: false,
+      message: note.focusPinned ? "Note pinned to focus" : "Note unpinned from focus",
+      note,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: true, message: error.message });
+  }
+};
+
 module.exports = {
   addNote,
   editNote,
@@ -778,4 +1157,10 @@ module.exports = {
   getNotesBySmartView,
   getDailyFocus,
   getRelatedNotes,
+  getSmartPriority,
+  snoozeNote,
+  unsnoozeNote,
+  dismissFromFocus,
+  restoreToFocus,
+  toggleFocusPin,
 };

@@ -26,6 +26,10 @@ export interface Note {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  // Smart Priority Controls
+  snoozedUntil?: string | null;
+  dismissedFromFocus?: boolean;
+  focusPinned?: boolean;
 }
 
 export interface NoteFormData {
@@ -348,4 +352,145 @@ export interface ResumeSuggestionsData {
   isReturning: boolean;
   timeSinceActive: string | null;
   recentlyViewed: RecentlyViewedItem[];
+}
+
+// =============================================================================
+// SIMPLE PRIORITIZATION RULES - Transparent Note Ranking
+// =============================================================================
+// The system balances three key factors without exposing complex scores:
+// 1. URGENCY: Time-sensitive items (overdue, due today/soon)
+// 2. RECENCY: Recently touched notes you're actively working on
+// 3. USER INTENT: Explicit signals (pinned, high priority, tasks in progress)
+//
+// How adaptation works:
+// - As you interact with notes, recency naturally adjusts rankings
+// - Completing tasks reduces a note's prominence
+// - Urgency always wins when deadlines approach
+// - Pinned notes remain accessible but don't override urgent items
+// =============================================================================
+
+export type PrioritySignal =
+  | "overdue"         // Highest urgency - past due date
+  | "due_today"       // High urgency - due today
+  | "due_soon"        // Medium urgency - due within 3 days
+  | "high_priority"   // User-set importance
+  | "in_progress"     // Has incomplete tasks you're working on
+  | "recently_active" // Edited in last 24 hours
+  | "pinned"          // User wants easy access
+  | "returning";      // Haven't touched in a while but relevant
+
+export interface PriorityRule {
+  id: PrioritySignal;
+  label: string;
+  shortLabel: string;
+  description: string;
+  icon: string;
+  color: "red" | "amber" | "blue" | "emerald" | "purple" | "slate";
+}
+
+// Human-readable explanations for why notes appear where they do
+export const PRIORITY_RULES: PriorityRule[] = [
+  {
+    id: "overdue",
+    label: "Overdue",
+    shortLabel: "Overdue",
+    description: "Past its due date — needs attention now",
+    icon: "AlertTriangle",
+    color: "red",
+  },
+  {
+    id: "due_today",
+    label: "Due Today",
+    shortLabel: "Today",
+    description: "Due today — complete before end of day",
+    icon: "Clock",
+    color: "red",
+  },
+  {
+    id: "due_soon",
+    label: "Due Soon",
+    shortLabel: "Soon",
+    description: "Due within 3 days — plan ahead",
+    icon: "Calendar",
+    color: "amber",
+  },
+  {
+    id: "high_priority",
+    label: "High Priority",
+    shortLabel: "Priority",
+    description: "Marked as high priority by you",
+    icon: "Flag",
+    color: "amber",
+  },
+  {
+    id: "in_progress",
+    label: "In Progress",
+    shortLabel: "Active",
+    description: "Has tasks you're working through",
+    icon: "ArrowRight",
+    color: "emerald",
+  },
+  {
+    id: "recently_active",
+    label: "Recently Active",
+    shortLabel: "Recent",
+    description: "Edited in the last 24 hours",
+    icon: "Edit3",
+    color: "blue",
+  },
+  {
+    id: "pinned",
+    label: "Pinned",
+    shortLabel: "Pinned",
+    description: "Pinned for quick access",
+    icon: "Pin",
+    color: "purple",
+  },
+  {
+    id: "returning",
+    label: "Pick Up",
+    shortLabel: "Resume",
+    description: "You were working on this recently",
+    icon: "RotateCcw",
+    color: "slate",
+  },
+];
+
+// Helper to get rule config
+export const getPriorityRule = (signal: PrioritySignal): PriorityRule | undefined =>
+  PRIORITY_RULES.find((r) => r.id === signal);
+
+// Prioritized note with transparent reasoning
+export interface PrioritizedNote {
+  note: Note;
+  signals: PrioritySignal[];        // All signals that apply
+  primarySignal: PrioritySignal;    // Main reason it's surfaced
+  explanation: string;              // Human-readable reason
+  rank: number;                     // Position in the list (1-based)
+  isFocusPinned?: boolean;          // User explicitly pinned to focus
+}
+
+export interface SmartPriorityData {
+  urgent: PrioritizedNote[];        // Needs immediate attention (max 3)
+  active: PrioritizedNote[];        // Currently working on (max 4)
+  suggested: PrioritizedNote[];     // Good to tackle next (max 3)
+  focusPinned: PrioritizedNote[];   // User-pinned to always show
+  insights: PriorityInsight[];      // Quick tips about the ranking
+  snoozedCount: number;             // Number of snoozed notes
+}
+
+// Snooze duration options
+export type SnoozeDuration = "1h" | "4h" | "1d" | "3d" | "1w";
+
+export const SNOOZE_OPTIONS: { value: SnoozeDuration; label: string }[] = [
+  { value: "1h", label: "1 hour" },
+  { value: "4h", label: "4 hours" },
+  { value: "1d", label: "Tomorrow" },
+  { value: "3d", label: "3 days" },
+  { value: "1w", label: "1 week" },
+];
+
+export interface PriorityInsight {
+  type: "info" | "tip" | "success";
+  message: string;
 }
