@@ -470,6 +470,21 @@ export interface PrioritizedNote {
   isFocusPinned?: boolean;          // User explicitly pinned to focus
 }
 
+// Empty state context types
+export type EmptyStateContext =
+  | "new_user"        // No notes at all - guide to create first note
+  | "tasks_completed" // All tasks done - celebrate completion
+  | "all_managed"     // User snoozed/dismissed everything - acknowledge control
+  | "no_active_work"  // Notes exist but nothing active - gentle nudge
+  | null;             // Not empty, show normal priority list
+
+export interface SmartPriorityContext {
+  totalNotes: number;
+  dismissedCount: number;
+  completedTasksToday: number;
+  emptyStateContext: EmptyStateContext;
+}
+
 export interface SmartPriorityData {
   urgent: PrioritizedNote[];        // Needs immediate attention (max 3)
   active: PrioritizedNote[];        // Currently working on (max 4)
@@ -477,6 +492,7 @@ export interface SmartPriorityData {
   focusPinned: PrioritizedNote[];   // User-pinned to always show
   insights: PriorityInsight[];      // Quick tips about the ranking
   snoozedCount: number;             // Number of snoozed notes
+  context: SmartPriorityContext;    // Context for empty states
 }
 
 // Snooze duration options

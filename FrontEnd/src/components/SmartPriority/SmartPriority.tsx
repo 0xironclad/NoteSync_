@@ -17,6 +17,11 @@ import {
   BellOff,
   Star,
   MoreHorizontal,
+  Sparkles,
+  Coffee,
+  PartyPopper,
+  Inbox,
+  PenLine,
 } from "lucide-react"
 import {
   Note,
@@ -27,6 +32,7 @@ import {
   PriorityInsight,
   SnoozeDuration,
   SNOOZE_OPTIONS,
+  EmptyStateContext,
 } from "@/types/note"
 import { cn } from "@/lib/utils"
 import {
@@ -111,6 +117,134 @@ const SIGNAL_COLORS: Record<
   },
 }
 
+// =============================================================================
+// EMPTY STATE COMPONENTS
+// =============================================================================
+// These provide thoughtful, contextual guidance without overwhelming users.
+// Each state is designed to feel encouraging rather than pressuring.
+
+interface EmptyStateProps {
+  context: EmptyStateContext
+  snoozedCount: number
+  dismissedCount: number
+  completedTasksToday: number
+}
+
+function EmptyState({ context, snoozedCount, dismissedCount, completedTasksToday }: EmptyStateProps) {
+  // New user - no notes at all
+  if (context === "new_user") {
+    return (
+      <div className="py-8 px-4 text-center">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+          <Sparkles className="h-7 w-7 text-primary" />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-2">
+          Welcome to Smart Priority
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
+          As you create notes, this space will show what needs your attention first —
+          based on due dates, your priorities, and what you're working on.
+        </p>
+        <div className="mt-6 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-red-400" />
+            <span>Urgent</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>Active</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-violet-400" />
+            <span>Pinned</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Tasks completed - celebrate!
+  if (context === "tasks_completed") {
+    return (
+      <div className="py-8 px-4 text-center">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-950/20 flex items-center justify-center">
+          <PartyPopper className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-2">
+          Nice work!
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
+          You've completed {completedTasksToday} {completedTasksToday === 1 ? "task" : "tasks"} today.
+          Take a moment to appreciate that progress.
+        </p>
+        <p className="text-xs text-muted-foreground/70 mt-4">
+          New priorities will appear as you add due dates or start working on notes.
+        </p>
+      </div>
+    )
+  }
+
+  // All managed - user snoozed/dismissed everything
+  if (context === "all_managed") {
+    return (
+      <div className="py-8 px-4 text-center">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-950/20 flex items-center justify-center">
+          <Coffee className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-2">
+          You're in control
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
+          {snoozedCount > 0 && dismissedCount > 0 ? (
+            <>You've snoozed {snoozedCount} and dismissed {dismissedCount} suggestions.</>
+          ) : snoozedCount > 0 ? (
+            <>You've snoozed {snoozedCount} {snoozedCount === 1 ? "note" : "notes"} for later.</>
+          ) : (
+            <>You've dismissed some suggestions to focus on what matters.</>
+          )}
+        </p>
+        <p className="text-xs text-muted-foreground/70 mt-4">
+          Snoozed notes will return when their time is up.
+        </p>
+      </div>
+    )
+  }
+
+  // No active work - notes exist but nothing urgent or active
+  if (context === "no_active_work") {
+    return (
+      <div className="py-8 px-4 text-center">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+          <Inbox className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-2">
+          Nothing urgent right now
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
+          Your notes are all set. Items will appear here when they have due dates,
+          you mark them as priority, or you start working on them.
+        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1.5 rounded-md">
+            <Calendar className="h-3 w-3" />
+            <span>Add a due date</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1.5 rounded-md">
+            <Flag className="h-3 w-3" />
+            <span>Set priority</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1.5 rounded-md">
+            <PenLine className="h-3 w-3" />
+            <span>Edit a note</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 // Signal badge component
 function SignalBadge({
   signal,
@@ -174,10 +308,7 @@ function PriorityCard({
       )}
     >
       {/* Main clickable area */}
-      <button
-        onClick={onClick}
-        className="w-full text-left p-3"
-      >
+      <button onClick={onClick} className="w-full text-left p-3">
         <div className="flex items-start gap-3">
           {/* Rank indicator */}
           <div
@@ -437,14 +568,6 @@ function SmartPriority({
 }: SmartPriorityProps) {
   const [isExpanded, setIsExpanded] = useState(true)
 
-  // Don't render if no data or all sections empty
-  const hasContent =
-    data &&
-    (data.urgent.length > 0 ||
-      data.active.length > 0 ||
-      data.suggested.length > 0 ||
-      data.focusPinned.length > 0)
-
   if (isLoading) {
     return (
       <div className="mb-6 p-4 rounded-xl border border-border bg-card/50">
@@ -459,11 +582,36 @@ function SmartPriority({
     )
   }
 
-  if (!hasContent) {
+  // Handle case where data is null (shouldn't happen often)
+  if (!data) {
     return null
   }
 
-  const { urgent, active, suggested, focusPinned, insights, snoozedCount } = data!
+  const {
+    urgent,
+    active,
+    suggested,
+    focusPinned,
+    insights,
+    snoozedCount,
+    context,
+  } = data
+
+  // Check if we have content to show
+  const hasContent =
+    urgent.length > 0 ||
+    active.length > 0 ||
+    suggested.length > 0 ||
+    focusPinned.length > 0
+
+  // Check if we should show an empty state
+  const showEmptyState = !hasContent && context?.emptyStateContext
+
+  // Don't render at all if no content and no empty state context
+  if (!hasContent && !showEmptyState) {
+    return null
+  }
+
   const totalItems =
     urgent.length + active.length + suggested.length + focusPinned.length
 
@@ -471,7 +619,10 @@ function SmartPriority({
     <div className="mb-6 rounded-xl border border-border bg-card/50 overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Header */}
-        <div className="p-4 border-b border-border/50">
+        <div className={cn(
+          "p-4",
+          hasContent && "border-b border-border/50"
+        )}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -482,29 +633,36 @@ function SmartPriority({
                   Smart Priority
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  {totalItems} note{totalItems > 1 ? "s" : ""} ranked by urgency,
-                  recency & intent
-                  {snoozedCount > 0 && (
-                    <span className="text-muted-foreground/70">
-                      {" "}
-                      · {snoozedCount} snoozed
-                    </span>
+                  {hasContent ? (
+                    <>
+                      {totalItems} note{totalItems > 1 ? "s" : ""} ranked by
+                      urgency, recency & intent
+                      {snoozedCount > 0 && (
+                        <span className="text-muted-foreground/70">
+                          {" "}· {snoozedCount} snoozed
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    "Your prioritized notes will appear here"
                   )}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <CollapsibleTrigger asChild>
-                <button className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors">
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform duration-200",
-                      isExpanded && "rotate-180"
-                    )}
-                  />
-                </button>
-              </CollapsibleTrigger>
+              {hasContent && (
+                <CollapsibleTrigger asChild>
+                  <button className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors">
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        isExpanded && "rotate-180"
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+              )}
               <button
                 onClick={onDismiss}
                 className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
@@ -516,112 +674,124 @@ function SmartPriority({
           </div>
         </div>
 
+        {/* Empty State */}
+        {showEmptyState && (
+          <EmptyState
+            context={context.emptyStateContext}
+            snoozedCount={snoozedCount}
+            dismissedCount={context.dismissedCount}
+            completedTasksToday={context.completedTasksToday}
+          />
+        )}
+
         {/* Content */}
-        <CollapsibleContent>
-          <div className="p-4 space-y-5">
-            {/* Insights */}
-            {insights.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {insights.map((insight, idx) => (
-                  <InsightCard key={idx} insight={insight} />
-                ))}
-              </div>
-            )}
-
-            {/* Focus Pinned section - User's explicit pins */}
-            {focusPinned.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
-                  <Star className="h-3 w-3 fill-current" />
-                  Your Focus
-                </h3>
-                <div className="grid gap-2">
-                  {focusPinned.map((item) => (
-                    <PriorityCard
-                      key={item.note._id}
-                      item={item}
-                      onClick={() => onViewNote(item.note)}
-                      onSnooze={(d) => onSnoozeNote(item.note._id, d)}
-                      onDismiss={() => onDismissNote(item.note._id)}
-                      onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
-                    />
+        {hasContent && (
+          <CollapsibleContent>
+            <div className="p-4 space-y-5">
+              {/* Insights */}
+              {insights.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {insights.map((insight, idx) => (
+                    <InsightCard key={idx} insight={insight} />
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Urgent section */}
-            {urgent.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-3 w-3" />
-                  Needs Attention
-                </h3>
-                <div className="grid gap-2">
-                  {urgent.map((item) => (
-                    <PriorityCard
-                      key={item.note._id}
-                      item={item}
-                      onClick={() => onViewNote(item.note)}
-                      onSnooze={(d) => onSnoozeNote(item.note._id, d)}
-                      onDismiss={() => onDismissNote(item.note._id)}
-                      onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
-                    />
-                  ))}
+              {/* Focus Pinned section - User's explicit pins */}
+              {focusPinned.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+                    <Star className="h-3 w-3 fill-current" />
+                    Your Focus
+                  </h3>
+                  <div className="grid gap-2">
+                    {focusPinned.map((item) => (
+                      <PriorityCard
+                        key={item.note._id}
+                        item={item}
+                        onClick={() => onViewNote(item.note)}
+                        onSnooze={(d) => onSnoozeNote(item.note._id, d)}
+                        onDismiss={() => onDismissNote(item.note._id)}
+                        onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Active section */}
-            {active.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3" />
-                  Currently Active
-                </h3>
-                <div className="grid gap-2">
-                  {active.map((item) => (
-                    <PriorityCard
-                      key={item.note._id}
-                      item={item}
-                      onClick={() => onViewNote(item.note)}
-                      onSnooze={(d) => onSnoozeNote(item.note._id, d)}
-                      onDismiss={() => onDismissNote(item.note._id)}
-                      onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
-                    />
-                  ))}
+              {/* Urgent section */}
+              {urgent.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    Needs Attention
+                  </h3>
+                  <div className="grid gap-2">
+                    {urgent.map((item) => (
+                      <PriorityCard
+                        key={item.note._id}
+                        item={item}
+                        onClick={() => onViewNote(item.note)}
+                        onSnooze={(d) => onSnoozeNote(item.note._id, d)}
+                        onDismiss={() => onDismissNote(item.note._id)}
+                        onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Suggested section */}
-            {suggested.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-2 flex items-center gap-2">
-                  <Pin className="h-3 w-3" />
-                  Quick Access
-                </h3>
-                <div className="grid gap-2">
-                  {suggested.map((item) => (
-                    <PriorityCard
-                      key={item.note._id}
-                      item={item}
-                      onClick={() => onViewNote(item.note)}
-                      onSnooze={(d) => onSnoozeNote(item.note._id, d)}
-                      onDismiss={() => onDismissNote(item.note._id)}
-                      onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
-                    />
-                  ))}
+              {/* Active section */}
+              {active.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-2">
+                    <ArrowRight className="h-3 w-3" />
+                    Currently Active
+                  </h3>
+                  <div className="grid gap-2">
+                    {active.map((item) => (
+                      <PriorityCard
+                        key={item.note._id}
+                        item={item}
+                        onClick={() => onViewNote(item.note)}
+                        onSnooze={(d) => onSnoozeNote(item.note._id, d)}
+                        onDismiss={() => onDismissNote(item.note._id)}
+                        onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* How it works */}
-            <div className="pt-3 border-t border-border/50">
-              <HowItWorks />
+              {/* Suggested section */}
+              {suggested.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-2 flex items-center gap-2">
+                    <Pin className="h-3 w-3" />
+                    Quick Access
+                  </h3>
+                  <div className="grid gap-2">
+                    {suggested.map((item) => (
+                      <PriorityCard
+                        key={item.note._id}
+                        item={item}
+                        onClick={() => onViewNote(item.note)}
+                        onSnooze={(d) => onSnoozeNote(item.note._id, d)}
+                        onDismiss={() => onDismissNote(item.note._id)}
+                        onToggleFocusPin={() => onToggleFocusPin(item.note._id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* How it works */}
+              <div className="pt-3 border-t border-border/50">
+                <HowItWorks />
+              </div>
             </div>
-          </div>
-        </CollapsibleContent>
+          </CollapsibleContent>
+        )}
       </Collapsible>
     </div>
   )

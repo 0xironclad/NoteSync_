@@ -973,6 +973,29 @@ const getSmartPriority = async (req, res) => {
       });
     }
 
+    // --- CONTEXT FOR EMPTY STATES ---
+    // Provides information to help the UI show appropriate empty states
+    const totalNotes = allNotes.length;
+    const dismissedCount = allNotes.filter(n => n.dismissedFromFocus && !n.focusPinned).length;
+    const completedTasksToday = allNotes.filter(n => {
+      if (!n.checklist || n.checklist.length === 0) return false;
+      return n.checklist.every(item => item.isCompleted);
+    }).length;
+
+    // Determine the user's current context
+    let emptyStateContext = null;
+    if (totalNotes === 0) {
+      emptyStateContext = "new_user"; // No notes at all
+    } else if (urgent.length === 0 && active.length === 0 && suggested.length === 0 && focusPinned.length === 0) {
+      if (snoozedCount > 0 || dismissedCount > 0) {
+        emptyStateContext = "all_managed"; // User has actively managed their priorities
+      } else if (completedTasksToday > 0) {
+        emptyStateContext = "tasks_completed"; // User completed their tasks
+      } else {
+        emptyStateContext = "no_active_work"; // Notes exist but nothing active
+      }
+    }
+
     return res.status(200).json({
       error: false,
       priority: {
@@ -982,6 +1005,13 @@ const getSmartPriority = async (req, res) => {
         focusPinned,
         insights,
         snoozedCount,
+        // Context for empty states
+        context: {
+          totalNotes,
+          dismissedCount,
+          completedTasksToday,
+          emptyStateContext,
+        },
       },
       // Include explanation of the ranking system
       howItWorks: {
