@@ -552,6 +552,137 @@ const getDailyFocus = async (req, res) => {
   }
 };
 
+// !GET RELATED NOTES (Context-Aware Suggestions)
+// Surfaces notes related to the currently viewed/edited note
+const getRelatedNotes = async (req, res) => {
+  const { user } = req.user;
+  const { noteId } = req.params;
+
+  try {
+    // Get the current note
+    const currentNote = await Note.findOne({ _id: noteId, userId: user._id });
+    if (!currentNote) {
+      return res.status(404).json({
+        error: true,
+        message: "Note not found!",
+      });
+    }
+
+    // Get all other active notes
+    const otherNotes = await Note.find({
+      userId: user._id,
+      _id: { $ne: noteId },
+      isArchived: false
+    });
+
+    // Calculate relevance scores for each note
+    const scoredNotes = otherNotes.map(note => {
+      let score = 0;
+      const reasons = [];
+
+      // 1. SHARED TAGS (strongest signal) - 3 points per shared tag
+      const sharedTags = currentNote.tags.filter(tag => note.tags.includes(tag));
+      if (sharedTags.length > 0) {
+        score += sharedTags.length * 3;
+        reasons.push({
+          type: "sharedTags",
+          tags: sharedTags,
+          label: sharedTags.length === 1 ? `#${sharedTags[0]}` : `${sharedTags.length} shared tags`
+        });
+      }
+
+      // 2. SAME NOTE TYPE (moderate signal) - 2 points
+      if (note.noteType === currentNote.noteType && currentNote.noteType !== "note") {
+        score += 2;
+        reasons.push({
+          type: "sameType",
+          noteType: note.noteType,
+          label: `Also a ${note.noteType}`
+        });
+      }
+
+      // 3. UNFINISHED TASKS in same category - 2 points
+      const hasIncompleteTasks = note.checklist.length > 0 &&
+        note.checklist.some(item => !item.isCompleted);
+      if (hasIncompleteTasks && sharedTags.length > 0) {
+        score += 2;
+        const completedCount = note.checklist.filter(i => i.isCompleted).length;
+        const totalCount = note.checklist.length;
+        reasons.push({
+          type: "unfinishedTasks",
+          progress: (completedCount / totalCount) * 100,
+          label: `${totalCount - completedCount} task${totalCount - completedCount > 1 ? 's' : ''} remaining`
+        });
+      }
+
+      // 4. RECENTLY EDITED (weak signal for recency) - 1 point if within 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      if (new Date(note.updatedAt) > sevenDaysAgo) {
+        score += 1;
+      }
+
+      // 5. HIGH PRIORITY in same category - 1.5 points
+      if (note.priority === "high" && sharedTags.length > 0) {
+        score += 1.5;
+        reasons.push({
+          type: "highPriority",
+          label: "High priority"
+        });
+      }
+
+      // 6. CONTENT SIMILARITY - Check for shared words in title (basic)
+      // Only if no other strong signals
+      if (score === 0) {
+        const currentWords = currentNote.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const noteWords = note.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const sharedWords = currentWords.filter(word => noteWords.includes(word));
+        if (sharedWords.length > 0) {
+          score += sharedWords.length * 0.5;
+          reasons.push({
+            type: "similarTitle",
+            label: "Similar topic"
+          });
+        }
+      }
+
+      return {
+        note,
+        score,
+        reasons,
+        // Pick the most relevant reason for display
+        primaryReason: reasons[0] || null
+      };
+    });
+
+    // Filter notes with score > 0 and sort by score
+    const relatedNotes = scoredNotes
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5); // Limit to 5 related notes
+
+    // Also get notes with incomplete tasks that share context
+    const relatedWithTasks = relatedNotes
+      .filter(item => item.reasons.some(r => r.type === "unfinishedTasks"))
+      .slice(0, 3);
+
+    return res.status(200).json({
+      error: false,
+      related: {
+        notes: relatedNotes,
+        withTasks: relatedWithTasks,
+        currentNoteTags: currentNote.tags,
+        currentNoteType: currentNote.noteType
+      },
+      message: "Related notes retrieved successfully!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
 // Helper function to format relative time
 function formatTimeAgo(date, now) {
   const diffMs = now - date;
@@ -646,4 +777,5 @@ module.exports = {
   getSmartViewCounts,
   getNotesBySmartView,
   getDailyFocus,
+  getRelatedNotes,
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AxiosInstance from "../utils/AxiosInstance";
 import Dashboard from "./Dashboard";
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, DailyFocusData } from "@/types/note";
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, DailyFocusData, ResumeSuggestionsData } from "@/types/note";
 import { toast } from "sonner";
 
 interface NoteFormData {
@@ -40,6 +40,9 @@ function DashboardContainer() {
     const [dailyFocus, setDailyFocus] = useState<DailyFocusData | null>(null);
     const [focusLoading, setFocusLoading] = useState(true);
     const [focusDismissed, setFocusDismissed] = useState(false);
+    const [resumeData, setResumeData] = useState<ResumeSuggestionsData | null>(null);
+    const [resumeLoading, setResumeLoading] = useState(true);
+    const [resumeDismissed, setResumeDismissed] = useState(false);
 
     const fetchTags = useCallback(async () => {
         try {
@@ -77,6 +80,39 @@ function DashboardContainer() {
             setFocusLoading(false);
         }
     }, [focusDismissed]);
+
+    const fetchResumeSuggestions = useCallback(async () => {
+        if (resumeDismissed) return;
+        setResumeLoading(true);
+        try {
+            const response = await AxiosInstance.get("/activity/resume");
+            if (!response.data.error) {
+                setResumeData(response.data.resume);
+            }
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setResumeLoading(false);
+        }
+    }, [resumeDismissed]);
+
+    // Track note view when opening a note
+    const trackNoteView = useCallback(async (noteId: string) => {
+        try {
+            await AxiosInstance.post(`/activity/track-view/${noteId}`);
+        } catch (error) {
+            // Silent fail - tracking is non-critical
+        }
+    }, []);
+
+    // Track note edit when editing
+    const trackNoteEdit = useCallback(async (noteId: string) => {
+        try {
+            await AxiosInstance.post(`/activity/track-edit/${noteId}`);
+        } catch (error) {
+            // Silent fail - tracking is non-critical
+        }
+    }, []);
 
     const fetchData = useCallback(async () => {
         try {
@@ -141,11 +177,17 @@ function DashboardContainer() {
         fetchTags();
         fetchViewCounts();
         fetchDailyFocus();
-    }, [fetchData, fetchTags, fetchViewCounts, fetchDailyFocus]);
+        fetchResumeSuggestions();
+    }, [fetchData, fetchTags, fetchViewCounts, fetchDailyFocus, fetchResumeSuggestions]);
 
     const onDismissFocus = useCallback(() => {
         setFocusDismissed(true);
         setDailyFocus(null);
+    }, []);
+
+    const onDismissResume = useCallback(() => {
+        setResumeDismissed(true);
+        setResumeData(null);
     }, []);
 
     const onCreateNote = async (data: NoteFormData) => {
@@ -225,6 +267,10 @@ function DashboardContainer() {
         fetchDailyFocus();
     }, [fetchDailyFocus]);
 
+    useEffect(() => {
+        fetchResumeSuggestions();
+    }, [fetchResumeSuggestions]);
+
     return (
         <Dashboard
             notes={notes}
@@ -236,6 +282,9 @@ function DashboardContainer() {
             dailyFocus={dailyFocus}
             focusLoading={focusLoading}
             focusDismissed={focusDismissed}
+            resumeData={resumeData}
+            resumeLoading={resumeLoading}
+            resumeDismissed={resumeDismissed}
             onSearch={onSearchNote}
             onSelectTag={onSelectTag}
             onSelectView={onSelectView}
@@ -246,6 +295,9 @@ function DashboardContainer() {
             onArchiveNote={onArchiveNote}
             onToggleChecklistItem={onToggleChecklistItem}
             onDismissFocus={onDismissFocus}
+            onDismissResume={onDismissResume}
+            onTrackNoteView={trackNoteView}
+            onTrackNoteEdit={trackNoteEdit}
         />
     );
 }

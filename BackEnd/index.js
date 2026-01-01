@@ -8,6 +8,7 @@ const session = require("express-session");
 // !ROUTERS
 const userRouter = require("./routes/user.routes");
 const noteRouter = require("./routes/note.routes");
+const activityRouter = require("./routes/activity.routes");
 
 const app = express();
 app.use(express.json());
@@ -34,6 +35,7 @@ app.use(passport.session()); // ?For persistent login sessions
 // !App using the routes
 app.use("/", userRouter);
 app.use("/", noteRouter);
+app.use("/activity", activityRouter);
 
 
 

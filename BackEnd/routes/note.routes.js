@@ -13,7 +13,8 @@ const {
   getNotesByTag,
   getSmartViewCounts,
   getNotesBySmartView,
-  getDailyFocus
+  getDailyFocus,
+  getRelatedNotes
 } = require("../controllers/note.controller");
 
 router.post("/add-note", authenticateToken, addNote);
@@ -28,5 +29,6 @@ router.get("/notes-by-tag/:tag", authenticateToken, getNotesByTag);
 router.get("/smart-views/counts", authenticateToken, getSmartViewCounts);
 router.get("/smart-views/:view", authenticateToken, getNotesBySmartView);
 router.get("/daily-focus", authenticateToken, getDailyFocus);
+router.get("/related-notes/:noteId", authenticateToken, getRelatedNotes);
 
 module.exports = router;

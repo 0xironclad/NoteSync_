@@ -290,3 +290,62 @@ export interface DailyFocusData {
   recentlyEdited: FocusItem[];
   summary: DailyFocusSummary;
 }
+
+// Related Notes Types - Context-Aware Suggestions
+export type RelatedReasonType =
+  | "sharedTags"
+  | "sameType"
+  | "unfinishedTasks"
+  | "highPriority"
+  | "similarTitle";
+
+export interface RelatedReason {
+  type: RelatedReasonType;
+  label: string;
+  tags?: string[];
+  noteType?: NoteType;
+  progress?: number;
+}
+
+export interface RelatedNoteItem {
+  note: Note;
+  score: number;
+  reasons: RelatedReason[];
+  primaryReason: RelatedReason | null;
+}
+
+export interface RelatedNotesData {
+  notes: RelatedNoteItem[];
+  withTasks: RelatedNoteItem[];
+  currentNoteTags: string[];
+  currentNoteType: NoteType;
+}
+
+// Resume Suggestions Types - Continuity System
+export type ResumeSuggestionType =
+  | "incomplete_tasks"
+  | "last_viewed"
+  | "urgent_task";
+
+export interface ResumeSuggestion {
+  type: ResumeSuggestionType;
+  note: Note;
+  reason: string;
+  detail: string | null;
+  progress?: number;
+  scrollPosition?: number;
+}
+
+export interface RecentlyViewedItem {
+  note: Note;
+  viewedAt: string;
+  scrollPosition: number;
+}
+
+export interface ResumeSuggestionsData {
+  primary: ResumeSuggestion | null;
+  context: string | null;
+  isReturning: boolean;
+  timeSinceActive: string | null;
+  recentlyViewed: RecentlyViewedItem[];
+}

@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import MarkdownRenderer from "@/components/MarkdownRenderer"
+import RelatedNotes from "@/components/RelatedNotes/RelatedNotes"
 import {
   X,
   Edit2,
@@ -35,6 +36,7 @@ interface NoteViewerProps {
   onNavigate?: (direction: "prev" | "next") => void
   canNavigatePrev?: boolean
   canNavigateNext?: boolean
+  onViewRelatedNote?: (note: Note) => void
 }
 
 const NoteTypeIcon = ({ type, className }: { type: NoteType; className?: string }) => {
@@ -75,6 +77,7 @@ function NoteViewer({
   onNavigate,
   canNavigatePrev = false,
   canNavigateNext = false,
+  onViewRelatedNote,
 }: NoteViewerProps) {
   const colors = note ? NOTE_COLORS[note.color] || NOTE_COLORS.default : NOTE_COLORS.default
   const priority = note ? PRIORITY_CONFIG[note.priority] : PRIORITY_CONFIG.none
@@ -437,6 +440,14 @@ function NoteViewer({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Related Notes - Context-aware suggestions */}
+            {onViewRelatedNote && (
+              <RelatedNotes
+                noteId={note._id}
+                onViewNote={onViewRelatedNote}
+              />
             )}
 
             {/* Keyboard hints - very subtle */}

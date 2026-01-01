@@ -20,8 +20,9 @@ import {
   PanelLeft,
   ChevronRight,
 } from "lucide-react"
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS, DailyFocusData } from "@/types/note"
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS, DailyFocusData, ResumeSuggestionsData } from "@/types/note"
 import DailyFocus from "./DailyFocus/DailyFocus"
+import ResumePrompt from "./ResumePrompt/ResumePrompt"
 import { cn } from "@/lib/utils"
 
 interface NoteFormData {
@@ -51,6 +52,9 @@ interface DashboardProps {
   dailyFocus: DailyFocusData | null
   focusLoading: boolean
   focusDismissed: boolean
+  resumeData: ResumeSuggestionsData | null
+  resumeLoading: boolean
+  resumeDismissed: boolean
   onSearch: (query: string) => void
   onSelectTag: (tag: string | null) => void
   onSelectView: (view: SmartViewType) => void
@@ -61,6 +65,9 @@ interface DashboardProps {
   onArchiveNote: (noteId: string, isArchived: boolean) => Promise<void>
   onToggleChecklistItem: (noteId: string, itemId: string) => Promise<void>
   onDismissFocus: () => void
+  onDismissResume: () => void
+  onTrackNoteView: (noteId: string) => void
+  onTrackNoteEdit: (noteId: string) => void
 }
 
 // Icon mapping for smart views
@@ -88,6 +95,9 @@ function Dashboard({
   dailyFocus,
   focusLoading,
   focusDismissed,
+  resumeData,
+  resumeLoading,
+  resumeDismissed,
   onSearch,
   onSelectTag,
   onSelectView,
@@ -98,6 +108,9 @@ function Dashboard({
   onArchiveNote,
   onToggleChecklistItem,
   onDismissFocus,
+  onDismissResume,
+  onTrackNoteView,
+  onTrackNoteEdit,
 }: DashboardProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
@@ -145,6 +158,8 @@ function Dashboard({
   const handleOpenView = (note: Note) => {
     setViewingNote(note)
     setViewerOpen(true)
+    // Track this view for continuity
+    onTrackNoteView(note._id)
   }
 
   // Open note in edit mode (editor)
@@ -153,6 +168,8 @@ function Dashboard({
     setViewingNote(null)
     setEditingNote(note)
     setEditorOpen(true)
+    // Track this edit for continuity
+    onTrackNoteEdit(note._id)
   }
 
   // Transition from viewer to editor
@@ -161,6 +178,8 @@ function Dashboard({
       setViewerOpen(false)
       setEditingNote(viewingNote)
       setEditorOpen(true)
+      // Track this edit for continuity
+      onTrackNoteEdit(viewingNote._id)
     }
   }
 
@@ -254,6 +273,7 @@ function Dashboard({
         onNavigate={handleNavigate}
         canNavigatePrev={canNavigatePrev}
         canNavigateNext={canNavigateNext}
+        onViewRelatedNote={handleOpenView}
       />
 
       {/* Note Editor Dialog (Editing Mode) */}
@@ -547,6 +567,16 @@ function Dashboard({
             </p>
           )}
           {selectedTag && <div className="mb-6" />}
+
+          {/* Resume Prompt - Gentle continuity suggestion, shown first */}
+          {activeView === "all" && !searchQuery && !selectedTag && !resumeDismissed && (
+            <ResumePrompt
+              resumeData={resumeData}
+              onViewNote={handleOpenView}
+              onDismiss={onDismissResume}
+              isLoading={resumeLoading}
+            />
+          )}
 
           {/* Daily Focus - Only show on "all" view without search/tag filters */}
           {activeView === "all" && !searchQuery && !selectedTag && !focusDismissed && (
