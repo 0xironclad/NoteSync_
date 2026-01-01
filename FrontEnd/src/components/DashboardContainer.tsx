@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AxiosInstance from "../utils/AxiosInstance";
 import Dashboard from "./Dashboard";
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts } from "@/types/note";
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, DailyFocusData } from "@/types/note";
 import { toast } from "sonner";
 
 interface NoteFormData {
@@ -37,6 +37,9 @@ function DashboardContainer() {
         dueSoon: 0,
         archived: 0
     });
+    const [dailyFocus, setDailyFocus] = useState<DailyFocusData | null>(null);
+    const [focusLoading, setFocusLoading] = useState(true);
+    const [focusDismissed, setFocusDismissed] = useState(false);
 
     const fetchTags = useCallback(async () => {
         try {
@@ -59,6 +62,21 @@ function DashboardContainer() {
             console.log(error);
         }
     }, []);
+
+    const fetchDailyFocus = useCallback(async () => {
+        if (focusDismissed) return;
+        setFocusLoading(true);
+        try {
+            const response = await AxiosInstance.get("/daily-focus");
+            if (!response.data.error) {
+                setDailyFocus(response.data.focus);
+            }
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setFocusLoading(false);
+        }
+    }, [focusDismissed]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -122,7 +140,13 @@ function DashboardContainer() {
         fetchData();
         fetchTags();
         fetchViewCounts();
-    }, [fetchData, fetchTags, fetchViewCounts]);
+        fetchDailyFocus();
+    }, [fetchData, fetchTags, fetchViewCounts, fetchDailyFocus]);
+
+    const onDismissFocus = useCallback(() => {
+        setFocusDismissed(true);
+        setDailyFocus(null);
+    }, []);
 
     const onCreateNote = async (data: NoteFormData) => {
         const response = await AxiosInstance.post("/add-note", data);
@@ -197,6 +221,10 @@ function DashboardContainer() {
         fetchViewCounts();
     }, [fetchViewCounts]);
 
+    useEffect(() => {
+        fetchDailyFocus();
+    }, [fetchDailyFocus]);
+
     return (
         <Dashboard
             notes={notes}
@@ -205,6 +233,9 @@ function DashboardContainer() {
             allTags={allTags}
             activeView={activeView}
             viewCounts={viewCounts}
+            dailyFocus={dailyFocus}
+            focusLoading={focusLoading}
+            focusDismissed={focusDismissed}
             onSearch={onSearchNote}
             onSelectTag={onSelectTag}
             onSelectView={onSelectView}
@@ -214,6 +245,7 @@ function DashboardContainer() {
             onPinNote={onPinNote}
             onArchiveNote={onArchiveNote}
             onToggleChecklistItem={onToggleChecklistItem}
+            onDismissFocus={onDismissFocus}
         />
     );
 }

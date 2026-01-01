@@ -20,7 +20,8 @@ import {
   PanelLeft,
   ChevronRight,
 } from "lucide-react"
-import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS } from "@/types/note"
+import { Note, NoteColor, NotePriority, NoteType, ChecklistItem, SmartViewType, SmartViewCounts, SMART_VIEWS, DailyFocusData } from "@/types/note"
+import DailyFocus from "./DailyFocus/DailyFocus"
 import { cn } from "@/lib/utils"
 
 interface NoteFormData {
@@ -47,6 +48,9 @@ interface DashboardProps {
   allTags: TagInfo[]
   activeView: SmartViewType
   viewCounts: SmartViewCounts
+  dailyFocus: DailyFocusData | null
+  focusLoading: boolean
+  focusDismissed: boolean
   onSearch: (query: string) => void
   onSelectTag: (tag: string | null) => void
   onSelectView: (view: SmartViewType) => void
@@ -56,6 +60,7 @@ interface DashboardProps {
   onPinNote: (noteId: string, isPinned: boolean) => Promise<void>
   onArchiveNote: (noteId: string, isArchived: boolean) => Promise<void>
   onToggleChecklistItem: (noteId: string, itemId: string) => Promise<void>
+  onDismissFocus: () => void
 }
 
 // Icon mapping for smart views
@@ -80,6 +85,9 @@ function Dashboard({
   allTags,
   activeView,
   viewCounts,
+  dailyFocus,
+  focusLoading,
+  focusDismissed,
   onSearch,
   onSelectTag,
   onSelectView,
@@ -89,6 +97,7 @@ function Dashboard({
   onPinNote,
   onArchiveNote,
   onToggleChecklistItem,
+  onDismissFocus,
 }: DashboardProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
@@ -538,6 +547,16 @@ function Dashboard({
             </p>
           )}
           {selectedTag && <div className="mb-6" />}
+
+          {/* Daily Focus - Only show on "all" view without search/tag filters */}
+          {activeView === "all" && !searchQuery && !selectedTag && !focusDismissed && (
+            <DailyFocus
+              focusData={dailyFocus}
+              onViewNote={handleOpenView}
+              onDismiss={onDismissFocus}
+              isLoading={focusLoading}
+            />
+          )}
 
           {/* Empty state */}
           {notes.length === 0 && (

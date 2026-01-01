@@ -255,3 +255,38 @@ export const NOTE_TYPES: NoteTypeConfig[] = [
     },
   },
 ];
+
+// Daily Focus Types - Smart Retrieval System
+export type FocusReason =
+  | "overdue"
+  | "dueToday"
+  | "dueSoon"
+  | "highPriority"
+  | "pinnedWithTasks"
+  | "recentWithTasks"
+  | "recentEdit";
+
+export type FocusUrgency = "critical" | "high" | "medium" | "low";
+
+export interface FocusItem {
+  note: Note;
+  reason: FocusReason;
+  label: string;
+  urgency?: FocusUrgency;
+  daysOverdue?: number;
+  progress?: number;
+}
+
+export interface DailyFocusSummary {
+  overdueCount: number;
+  dueTodayCount: number;
+  highPriorityCount: number;
+  inProgressCount: number;
+}
+
+export interface DailyFocusData {
+  needsAttention: FocusItem[];
+  continueWorking: FocusItem[];
+  recentlyEdited: FocusItem[];
+  summary: DailyFocusSummary;
+}

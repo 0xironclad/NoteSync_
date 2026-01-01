@@ -401,6 +401,169 @@ const getSmartViewCounts = async (req, res) => {
   }
 };
 
+// !GET DAILY FOCUS (Smart Retrieval)
+// Surfaces the most relevant notes based on multiple signals
+const getDailyFocus = async (req, res) => {
+  const { user } = req.user;
+
+  try {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Fetch all active notes for the user
+    const allNotes = await Note.find({
+      userId: user._id,
+      isArchived: false
+    });
+
+    // Calculate focus scores and categorize notes
+    const focusItems = [];
+    const recentlyEdited = [];
+    const continueWorking = [];
+
+    for (const note of allNotes) {
+      // 1. OVERDUE OR DUE TODAY - Highest priority
+      if (note.dueDate) {
+        const dueDate = new Date(note.dueDate);
+        if (dueDate < startOfToday) {
+          focusItems.push({
+            note,
+            reason: "overdue",
+            label: "Overdue",
+            urgency: "critical",
+            daysOverdue: Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24))
+          });
+          continue;
+        }
+        if (dueDate >= startOfToday && dueDate < endOfToday) {
+          focusItems.push({
+            note,
+            reason: "dueToday",
+            label: "Due today",
+            urgency: "high"
+          });
+          continue;
+        }
+        // Due within 3 days
+        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+        if (dueDate <= threeDaysFromNow) {
+          focusItems.push({
+            note,
+            reason: "dueSoon",
+            label: `Due ${dueDate.toLocaleDateString('en-US', { weekday: 'short' })}`,
+            urgency: "medium"
+          });
+          continue;
+        }
+      }
+
+      // 2. HIGH PRIORITY with incomplete tasks
+      const hasIncompleteTasks = note.checklist.length > 0 &&
+        note.checklist.some(item => !item.isCompleted);
+
+      if (note.priority === "high") {
+        focusItems.push({
+          note,
+          reason: "highPriority",
+          label: "High priority",
+          urgency: hasIncompleteTasks ? "high" : "medium"
+        });
+        continue;
+      }
+
+      // 3. PINNED notes with incomplete tasks
+      if (note.isPinned && hasIncompleteTasks) {
+        const completedCount = note.checklist.filter(i => i.isCompleted).length;
+        const totalCount = note.checklist.length;
+        continueWorking.push({
+          note,
+          reason: "pinnedWithTasks",
+          label: `${completedCount}/${totalCount} done`,
+          progress: (completedCount / totalCount) * 100
+        });
+        continue;
+      }
+
+      // 4. RECENTLY EDITED (within 24 hours) - for "pick up where you left off"
+      const updatedAt = new Date(note.updatedAt);
+      if (updatedAt >= twentyFourHoursAgo) {
+        // Notes with incomplete tasks are more actionable
+        if (hasIncompleteTasks) {
+          const completedCount = note.checklist.filter(i => i.isCompleted).length;
+          const totalCount = note.checklist.length;
+          continueWorking.push({
+            note,
+            reason: "recentWithTasks",
+            label: `${completedCount}/${totalCount} done`,
+            progress: (completedCount / totalCount) * 100
+          });
+        } else {
+          recentlyEdited.push({
+            note,
+            reason: "recentEdit",
+            label: formatTimeAgo(updatedAt, now)
+          });
+        }
+      }
+    }
+
+    // Sort focus items by urgency
+    const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    focusItems.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+
+    // Sort continue working by progress (lower progress = more to do)
+    continueWorking.sort((a, b) => a.progress - b.progress);
+
+    // Sort recently edited by recency
+    recentlyEdited.sort((a, b) =>
+      new Date(b.note.updatedAt) - new Date(a.note.updatedAt)
+    );
+
+    // Limit results to avoid overwhelming users
+    const result = {
+      // Needs attention: overdue, due today/soon, high priority
+      needsAttention: focusItems.slice(0, 5),
+      // Continue working: pinned with tasks, recently edited with tasks
+      continueWorking: continueWorking.slice(0, 4),
+      // Pick up where you left off: recently edited
+      recentlyEdited: recentlyEdited.slice(0, 3),
+      // Summary counts for the header
+      summary: {
+        overdueCount: focusItems.filter(i => i.reason === "overdue").length,
+        dueTodayCount: focusItems.filter(i => i.reason === "dueToday").length,
+        highPriorityCount: focusItems.filter(i => i.reason === "highPriority").length,
+        inProgressCount: continueWorking.length
+      }
+    };
+
+    return res.status(200).json({
+      error: false,
+      focus: result,
+      message: "Daily focus retrieved successfully!",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+// Helper function to format relative time
+function formatTimeAgo(date, now) {
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return "Yesterday";
+}
+
 // !GET NOTES BY SMART VIEW
 const getNotesBySmartView = async (req, res) => {
   const { user } = req.user;
@@ -482,4 +645,5 @@ module.exports = {
   getNotesByTag,
   getSmartViewCounts,
   getNotesBySmartView,
+  getDailyFocus,
 };
